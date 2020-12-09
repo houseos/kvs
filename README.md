@@ -45,14 +45,14 @@ USAGE:
 
 FLAGS:
     -h, --help       Prints help information
-        --value      Port the kvs daemon is bound to.
         --tls        Set to enable TLS support for gRPC.
                      If set certificate and private key are expected as ca.crt in the execution directory of kvsc
                      binary.
     -V, --version    Prints version information
 
 OPTIONS:
-        --ip <ip>    IP address the kvs daemon is bound to.
+        --ip <ip>        IP address the kvs daemon is bound to.
+        --port <port>    Port the kvs daemon is bound to.
 
 SUBCOMMANDS:
     delete    Delete the given key.

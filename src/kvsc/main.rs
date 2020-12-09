@@ -40,7 +40,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arg::with_name("port")
                 .help("Port the kvs daemon is bound to.")
                 .required(false)
-                .long("port").long("value"),
+                .long("port")
+                .takes_value(true),
         )
         .arg(
             Arg::with_name("tls")
