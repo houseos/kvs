@@ -1,0 +1,61 @@
+# GitHub Actions
+#  SPDX-License-Identifier: MIT
+#  Copyright (C) 2020 Benjamin Schilling
+
+name: Rust
+
+on: push
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set-up toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rustfmt, clippy
+    - name: linter
+      uses: actions-rs/clippy-check@v1
+      with:
+        token: ${{ secrets.GITHUB_TOKEN }}
+        args: --all-features
+    - name: Build
+      run: cargo build --release
+    - name: Run tests
+      run: cargo test
+    - uses: actions/upload-artifact@v1
+      with:
+        name: kvsd-linux-amd64
+        path: ./target/release/kvsd
+    - uses: actions/upload-artifact@v1
+      with:
+        name: kvsc-linux-amd64
+        path: ./target/release/kvsc
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Set-up toolchain
+      uses: actions-rs/toolchain@v1
+      with:
+        toolchain: nightly
+        override: true
+        components: rustfmt
+    - name: Build exe
+      run: |
+        cargo build --release
+    - uses: actions/upload-artifact@v1
+      with:
+        name: kvsd.exe
+        path: ./target/release/kvsd.exe
+    - uses: actions/upload-artifact@v1
+      with:
+        name: kvsc.exe
+        path: ./target/release/kvsc.exe
