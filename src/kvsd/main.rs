@@ -6,11 +6,17 @@
 
 #![feature(proc_macro_hygiene, decl_macro)]
 
-// gRPC
-mod grpc;
+// Rust Standard Library
+use std::thread;
 
-//kvs crates
+// Store
+extern crate two_lock_queue;
+
+//kvs modules
+mod grpc;
+mod store;
 use crate::utils::input_validation;
+use store::QueueAction;
 use utils;
 
 // CLI interface
@@ -80,14 +86,33 @@ fn main() {
         }
     }
 
-    // Start the gRPC Server in a separate thread
-    match grpc::start_grpc_server(ip, port, matches.is_present("tls")) {
-        Ok(o) => {
-            println!("{:?}", o);
+    // Read persistent store from file
+    match store::initialize_store_from_file() {
+        Ok(ok) => println!("Finished loading file: {}", ok),
+        Err(e) => eprintln!("Error loading file: {}", e),
+    }
+
+    let (tx, rx) = two_lock_queue::unbounded::<QueueAction>();
+
+    // Start the gRPC Server in a thread
+    thread::spawn(move || {
+        match grpc::start_grpc_server(ip, port, matches.is_present("tls"), tx.clone()) {
+            Ok(o) => {
+                println!("{:?}", o);
+            }
+            Err(e) => {
+                eprintln!("{}", e);
+                std::process::exit(0x0001);
+            }
         }
-        Err(e) => {
-            eprintln!("{}", e);
-            std::process::exit(0x0001);
-        }
-    };
+    });
+
+    // Start the store handler in a thread
+    let child = thread::spawn(move || loop {
+        let action = rx.recv().unwrap();
+        store::handle_action(action);
+    });
+
+    //Run infinitely, until CTRL+C
+    let _res = child.join();
 }

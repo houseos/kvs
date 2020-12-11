@@ -167,7 +167,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during store: {:?}", e);
+                    eprintln!("Error during store: {:?}", e.message());
                     std::process::exit(0x0001);
                 }
             };
@@ -192,7 +192,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during get: {:?}", e);
+                    eprintln!("Error during get: {:?}", e.message());
                     std::process::exit(0x0001);
                 }
             };
@@ -218,7 +218,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during delete: {:?}", e);
+                    eprintln!("Error during delete: {:?}", e.message());
                     std::process::exit(0x0001);
                 }
             };
