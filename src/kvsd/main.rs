@@ -14,9 +14,9 @@ extern crate two_lock_queue;
 
 //kvs modules
 mod grpc;
-mod store;
+mod json_store;
 use crate::utils::input_validation;
-use store::QueueAction;
+use json_store::QueueAction;
 use utils;
 
 // CLI interface
@@ -87,7 +87,7 @@ fn main() {
     }
 
     // Read persistent store from file
-    match store::initialize_store_from_file() {
+    match json_store::initialize_store_from_file() {
         Ok(ok) => println!("Finished loading file: {}", ok),
         Err(e) => eprintln!("Error loading file: {}", e),
     }
@@ -110,7 +110,7 @@ fn main() {
     // Start the store handler in a thread
     let child = thread::spawn(move || loop {
         let action = rx.recv().unwrap();
-        store::handle_action(action);
+        json_store::handle_action(action);
     });
 
     //Run infinitely, until CTRL+C

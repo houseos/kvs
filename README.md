@@ -1,4 +1,4 @@
-# kvs - Non-distributed Secure Key Value Store
+# kvs - Secure Key Value Store
 
 Have you ever implemented an application that had to store data persistently?
 Have you ever been afraid of the confidentiality of this information?
@@ -137,6 +137,97 @@ kvsc -- gRPC
 app -- gRPC
 
 ```
+
+The kvsd is intended for embedded or industrial use cases where the hardware is limited but not too restricted. It can also be used in more powerful systems allowing more stored data.
+
+
+
+## Backends
+
+The kvsd supports two backends.
+
+The first backend is implemented as a JSON array of key value pairs.
+It is inteded for small databases of keys with small keys because the whole store is parsed and stored in RAM.
+
+The second backend is implemented on file base.
+Each entry is stored as a separate file with the file name representing the key and the content representing the value.
+
+### JSON Backend
+
+The JSON Backend stores all values in the following structure:
+
+```json
+{
+    "key": "value",
+    "key2": "value2",
+    "key n": "value n"
+}
+```
+
+On start-up of the kvsd the file is parsed and stored in a hashmap.
+Therefore all data is stored in RAM.
+Using this backend the length of the values is restricted to 1024 characters.
+Otherwise the risk of consuming to much RAM during runtime is too high.
+Additionally the number of key value pairs is restricted to 10.000 to prevent too much ressource consumption.
+10.000 key value pairs result in around 11MB of RAM consumption.
+
+#### Security
+
+The JSON Backend is intended for less-secure environments.
+The keys are stored in plain-text form, while only the values are encrypted.
+
+
+
+The kvsd stores the data it receives in a JSON file.
+This JSON file contains key value pairs.
+
+```json
+{
+  "key": "derivation-value (32 byte)$iv$encrypted-value",
+  "0123456789012345$CC4BB7F2682E222AEDD67EBB4EF7E3C4C4E8C6C66C251310CBECDC1D9CEAD55AA593F6D786CEBAEF2739C10884A6D5BAF46C8C8C53F0D56998EE2C9CC56B3117": "01234567890123450123456789012345$0123456789012345$",
+  "test": "testvalue"
+}
+```
+The encrypted value is generated using the function `AES256GCM(Key, Initialization Vector, Plaintext)` as follows: 
+
+> `AES256GCM(derive_key(dv), iv, plaintext value)`
+
+```puml
+```
+
+### File Backend
+
+The file backend stores each key value pair in a file.
+Additionally a JSON file is created containing references to all files and the key related to each of them.
+
+This allows to store dramatically bigger values.
+Only the JSON file is loaded during runtime and the file is loaded, decrypted and returned only on request.
+
+#### Security
+
+The key is stored in an encrypted JSON file, containing a reference to an encrypted file (containing the value) and the secrect to decrypt the file.
+The JSON file is decrypted with a secret derived from the 
+
+```json
+{
+    "files": [
+        {
+            "key": "key",
+            "filename": "",
+            "secret": "key"
+        },
+        {
+            "key": "key",
+            "filename": "",
+            "secret": "key"
+        }
+    ]
+}
+```
+
+
+filename = key
+content = value
 
 ## License
 

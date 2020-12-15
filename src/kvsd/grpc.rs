@@ -25,7 +25,7 @@ pub mod kvs_api {
 }
 
 // kvs modules
-use crate::store::{get_value, QueueAction, ACTION_DELETE, ACTION_STORE};
+use crate::json_store::{get_value, QueueAction, ACTION_DELETE, ACTION_STORE};
 use crate::utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
 
 // Implementation of the gRPC Service

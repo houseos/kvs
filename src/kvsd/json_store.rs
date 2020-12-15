@@ -52,37 +52,11 @@ pub fn handle_action(action: QueueAction) {
                 "Storing key \"{}\" with value \"{}\".",
                 action.kv.key, action.kv.value
             );
-            STORE
-                .write()
-                .unwrap()
-                .elements
-                .insert(action.kv.key, action.kv.value);
-            let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
-                Ok(j) => j,
-                Err(_e) => return eprintln!("Error serializing hashmap."),
-            };
-            let path = get_exec_dir().expect("Couldn't");
-            write_persistent_store_file_from_string(
-                path.as_path().to_str().unwrap().to_string(),
-                j.as_bytes(),
-            );
+            store_action(action);
         }
         ACTION_DELETE => {
             println!("Deleting key \"{}\".", action.kv.key);
-            STORE
-                .write()
-                .unwrap()
-                .elements
-                .remove(action.kv.key.as_str());
-            let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
-                Ok(j) => j,
-                Err(_e) => return eprintln!("Error serializing hashmap."),
-            };
-            let path = get_exec_dir().expect("Couldn't");
-            write_persistent_store_file_from_string(
-                path.as_path().to_str().unwrap().to_string(),
-                j.as_bytes(),
-            );
+            delete_action(action);
         }
         _ => {
             eprintln!("No matching action available.");
@@ -90,8 +64,52 @@ pub fn handle_action(action: QueueAction) {
     }
 }
 
+fn store_action(action: QueueAction) {
+    // Generate salt for value
+
+    // Generate IV for value
+
+    // Encrypt value
+
+    //base64 encode result
+
+    STORE
+        .write()
+        .unwrap()
+        .elements
+        .insert(action.kv.key, action.kv.value);
+    let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
+        Ok(j) => j,
+        Err(_e) => return eprintln!("Error serializing hashmap."),
+    };
+    let path = get_exec_dir().expect("Couldn't");
+    write_persistent_store_file_from_string(
+        path.as_path().to_str().unwrap().to_string(),
+        j.as_bytes(),
+    );
+}
+
+fn delete_action(action: QueueAction) {
+    STORE
+        .write()
+        .unwrap()
+        .elements
+        .remove(action.kv.key.as_str());
+    let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
+        Ok(j) => j,
+        Err(_e) => return eprintln!("Error serializing hashmap."),
+    };
+    let path = get_exec_dir().expect("Couldn't");
+    write_persistent_store_file_from_string(
+        path.as_path().to_str().unwrap().to_string(),
+        j.as_bytes(),
+    );
+}
+
 // Reading is possible without the queue
 pub fn get_value(key: String) -> Result<String, String> {
+    // read salt
+
     match STORE.read().unwrap().elements.get(key.as_str()) {
         Some(value) => Ok(value.to_string()),
         None => Err("Key not found!".to_string()),
