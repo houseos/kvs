@@ -6,10 +6,10 @@
 
 use regex::Regex;
 
-static KEY_LEN_MIN: usize = 1;
-static KEY_LEN_MAX: usize = 32;
-static VALUE_LEN_MIN: usize = 1;
-static VALUE_LEN_MAX: usize = 32;
+const KEY_LEN_MIN: usize = 1;
+const KEY_LEN_MAX: usize = 32;
+const VALUE_LEN_MIN: usize = 1;
+const VALUE_LEN_MAX: usize = 1024;
 
 pub fn validate_key(input: String) -> bool {
     lazy_static! {
@@ -34,6 +34,16 @@ pub fn validate_value(input: String) -> bool {
     if trimmed_input.len() < VALUE_LEN_MIN || trimmed_input.len() > VALUE_LEN_MAX {
         return false;
     }
+    // Check regex
+    RE_KEY.is_match(&trimmed_input)
+}
+
+pub fn validate_path(input: String) -> bool {
+    lazy_static! {
+        // Allow only alphanumeric characters as well as "/", "\", ":" and "."
+        static ref RE_KEY: Regex = Regex::new(r"^[\w/\\.:-]*$").unwrap();
+    }
+    let trimmed_input = input.trim();
     // Check regex
     RE_KEY.is_match(&trimmed_input)
 }
@@ -188,7 +198,7 @@ mod tests {
         for x in 0..10 {
             println!("Base64 random string run: {}", x);
             // generate random length
-            let string_len: usize = rng.gen_range(0, 50);
+            let string_len: usize = rng.gen_range(0, VALUE_LEN_MAX + 10);
             // generate random string
             let test_string: String = (0..string_len)
                 .map(|_| {

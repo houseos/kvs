@@ -25,7 +25,7 @@ pub mod kvs_api {
 }
 
 // kvs modules
-use crate::json_store::{get_value, QueueAction, ACTION_DELETE, ACTION_STORE};
+use crate::json_store::{get_value, is_store_full, QueueAction, ACTION_DELETE, ACTION_STORE};
 use crate::utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
 
 // Implementation of the gRPC Service
@@ -49,6 +49,12 @@ impl Kvs for KvsImpl {
         if !input_validation::validate_value(message.clone().value) {
             return Err(Status::invalid_argument("Value invalid."));
         }
+        if is_store_full() {
+            return Err(Status::resource_exhausted(
+                "Can not store more key value pairs, limit of 10.000 reached.",
+            ));
+        }
+
         let action: QueueAction = QueueAction {
             kv: message.clone(),
             action: ACTION_STORE,
@@ -101,12 +107,12 @@ pub fn start_grpc_server(
 
     // If TLS is enabled start gRPC server with credentials
     if enable_tls {
-        let path = get_exec_dir().expect("Couldn't");
+        let path = get_exec_dir();
         println!(
             "TLS Option for gRPC given, looking for certificate and private key in {}",
-            path.display()
+            path
         );
-        let credentials = match crypto::Credentials::new(format!("{}", path.display())) {
+        let credentials = match crypto::Credentials::new(path) {
             Ok(creds) => creds,
             Err(e) => return Err(e),
         };

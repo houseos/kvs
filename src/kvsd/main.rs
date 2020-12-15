@@ -15,6 +15,7 @@ extern crate two_lock_queue;
 //kvs modules
 mod grpc;
 mod json_store;
+use crate::utils::filesystem_wrapper;
 use crate::utils::input_validation;
 use json_store::QueueAction;
 use utils;
@@ -53,6 +54,13 @@ fn main() {
                 .takes_value(true),
         )
         .arg(
+            Arg::with_name("path")
+            .help("Filesystem path for the persistent store.")
+            .required(false)
+            .long("path")
+            .takes_value(true),
+        )
+        .arg(
             Arg::with_name("tls")
                 .help("Set to enable TLS support for gRPC.\nIf set certificate and private key are expected as grpc.crt\nand grpc.key in the execution directory of kvsc binary.")
                 .long("tls"),
@@ -60,34 +68,46 @@ fn main() {
         .get_matches();
     // Set IP and Port to default values
     let mut ip: String = "127.0.0.1".to_string();
-    let mut port: String = "27001".to_string();
     // Set IP to provided value if existing
     if matches.is_present("ip") {
         if input_validation::validate_ipv4(matches.value_of("ip").unwrap().to_string()) {
             ip = matches.value_of("ip").unwrap().to_string();
         } else {
             eprintln!(
-                "IP parameter {} invalid, only IPv4 allowed.",
+                "IP parameter \"{}\" invalid, only IPv4 allowed.",
                 matches.value_of("ip").unwrap().to_string()
             );
             std::process::exit(0x0001);
         }
     }
     // Set Port to provided value if existing
+    let mut port: String = "27001".to_string();
     if matches.is_present("port") {
         if input_validation::validate_port(matches.value_of("port").unwrap().to_string()) {
             port = matches.value_of("port").unwrap().to_string();
         } else {
             eprintln!(
-                "Port parameter {} invalid, only valid TCP port numbers allowed.",
+                "Port parameter \"{}\" invalid, only valid TCP port numbers allowed.",
                 matches.value_of("port").unwrap().to_string()
             );
             std::process::exit(0x0001);
         }
     }
-
+    // Set path for persistent store file
+    let mut path: String = filesystem_wrapper::get_exec_dir();
+    if matches.is_present("path") {
+        if input_validation::validate_path(matches.value_of("path").unwrap().to_string()) {
+            path = matches.value_of("path").unwrap().to_string();
+        } else {
+            eprintln!(
+                "Path parameter \"{}\" invalid, only valid filesystem paths using alphanumeric characters, \"\\\", \"/\", \".\", \":\", \"-\", \"_\" are allowed.",
+                matches.value_of("Path").unwrap().to_string()
+            );
+            std::process::exit(0x0001);
+        }
+    }
     // Read persistent store from file
-    match json_store::initialize_store_from_file() {
+    match json_store::initialize_store_from_file(path.clone()) {
         Ok(ok) => println!("Finished loading file: {}", ok),
         Err(e) => eprintln!("Error loading file: {}", e),
     }
@@ -110,7 +130,7 @@ fn main() {
     // Start the store handler in a thread
     let child = thread::spawn(move || loop {
         let action = rx.recv().unwrap();
-        json_store::handle_action(action);
+        json_store::handle_action(action, path.clone());
     });
 
     //Run infinitely, until CTRL+C

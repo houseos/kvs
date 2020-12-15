@@ -54,12 +54,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .arg(
                 Arg::with_name("key")
                 .long("key")
+                .help("Key of the key value pair, max. length 32.")
                 .takes_value(true)
                 .required(true)
             )
             .arg(
                 Arg::with_name("value")
                 .long("value")
+                .help("Value of the key value pair, max. length 1024.")
                 .takes_value(true)
                 .required(true)
             )
@@ -70,6 +72,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .arg(
                 Arg::with_name("key")
                 .long("key")
+                .help("Key of the key value pair, max. length 32.")
                 .takes_value(true)
                 .required(true)
             )
@@ -80,6 +83,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             .arg(
                 Arg::with_name("key")
                 .long("key")
+                .help("Key of the key value pair, max. length 32.")
                 .takes_value(true)
                 .required(true)
             )
@@ -117,12 +121,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let socket = format!("http://{}:{}", ip, port).parse().unwrap();
     let channel;
     if matches.is_present("tls") {
-        let path = get_exec_dir().expect("Couldn't");
-        println!(
-            "TLS Option for gRPC given, looking for ca.crt in {}",
-            path.display()
-        );
-        let trust_store = match crypto::TrustStore::new(format!("{}", path.display())) {
+        let path = get_exec_dir();
+        println!("TLS Option for gRPC given, looking for ca.crt in {}", path);
+        let trust_store = match crypto::TrustStore::new(path) {
             Ok(trusted) => trusted,
             Err(e) => {
                 eprintln!("Error during store: {:?}", e);

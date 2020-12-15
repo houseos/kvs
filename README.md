@@ -138,7 +138,8 @@ app -- gRPC
 
 ```
 
-The kvsd is intended for embedded or industrial use cases where the hardware is limited but not too restricted. It can also be used in more powerful systems allowing more stored data.
+The kvsd is intended for embedded or industrial use cases where the hardware is limited but not too restricted. 
+It can also be used in more powerful systems allowing more stored data.
 
 
 
@@ -183,14 +184,14 @@ This JSON file contains key value pairs.
 
 ```json
 {
-  "key": "derivation-value (32 byte)$iv$encrypted-value",
-  "0123456789012345$CC4BB7F2682E222AEDD67EBB4EF7E3C4C4E8C6C66C251310CBECDC1D9CEAD55AA593F6D786CEBAEF2739C10884A6D5BAF46C8C8C53F0D56998EE2C9CC56B3117": "01234567890123450123456789012345$0123456789012345$",
+  "key": "derivation-value (32 byte)$iv (16 bytes)$encrypted-value",
+  "key": "01234567890123450123456789012345$0123456789012345$0123456789012345$",
   "test": "testvalue"
 }
 ```
-The encrypted value is generated using the function `AES256GCM(Key, Initialization Vector, Plaintext)` as follows: 
+The encrypted value is generated using the function `Base64(AES256GCM(Key, Initialization Vector, Plaintext))` as follows: 
 
-> `AES256GCM(derive_key(dv), iv, plaintext value)`
+> `Base64(AES256GCM(derive_key(dv), iv, plaintext value))`
 
 ```puml
 ```
@@ -213,21 +214,17 @@ The JSON file is decrypted with a secret derived from the
     "files": [
         {
             "key": "key",
-            "filename": "",
+            "filename": "file1",
             "secret": "key"
         },
         {
             "key": "key",
-            "filename": "",
+            "filename": "file2",
             "secret": "key"
         }
     ]
 }
 ```
-
-
-filename = key
-content = value
 
 ## License
 
