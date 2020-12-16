@@ -91,7 +91,7 @@ fn store_action(action: QueueAction, path: String) {
             Some(value) => value.filename.clone(),
             None => "".to_string(),
         };
-        if filename == "" {
+        if filename.is_empty() {
             eprintln!(
                 "Could not find key \"{}\" that should already be stored. Ommiting store action.",
                 action.kv.key
