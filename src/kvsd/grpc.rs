@@ -25,13 +25,21 @@ pub mod kvs_api {
 }
 
 // kvs modules
-use crate::json_store::{get_value, is_store_full, QueueAction, ACTION_DELETE, ACTION_STORE};
+use crate::store::file_store;
+use crate::store::json_store;
+use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
 use crate::utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
+
+// Supported backends
+const BACKEND_JSON: u8 = 0;
+const BACKEND_FILE: u8 = 1;
 
 // Implementation of the gRPC Service
 //#[derive(Debug)]
 pub struct KvsImpl {
     send_queue: Sender<QueueAction>,
+    backend: u8,
+    storage_path: String,
 }
 
 #[tonic::async_trait]
@@ -42,21 +50,37 @@ impl Kvs for KvsImpl {
         request: Request<KeyValuePair>,
     ) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
+        // sanitize key and value
+        let key: String = message.clone().key.trim().to_string();
+        let value: String = message.clone().value.trim().to_string();
 
-        if !input_validation::validate_key(message.clone().key) {
+        // Check key
+        if !input_validation::validate_key(key.clone()) {
             return Err(Status::invalid_argument("Key invalid."));
         }
-        if !input_validation::validate_value(message.clone().value) {
+        // Dont check length if file backend is used.
+        let mut check_length = true;
+        if self.backend == BACKEND_FILE {
+            check_length = false;
+        }
+        // Check value
+        if !input_validation::validate_value(value.clone(), check_length) {
             return Err(Status::invalid_argument("Value invalid."));
         }
-        if is_store_full() {
-            return Err(Status::resource_exhausted(
-                "Can not store more key value pairs, limit of 10.000 reached.",
-            ));
+        // Check size of store if JSON Backend is used
+        if self.backend == BACKEND_JSON {
+            if json_store::is_store_full() {
+                return Err(Status::resource_exhausted(
+                    "Can not store more key value pairs, limit of 10.000 reached.",
+                ));
+            }
         }
-
+        // Create QueueAction and send it to queue
         let action: QueueAction = QueueAction {
-            kv: message.clone(),
+            kv: KeyValuePair {
+                key: key,
+                value: value,
+            },
             action: ACTION_STORE,
         };
         self.send_queue.send(action).unwrap();
@@ -66,13 +90,28 @@ impl Kvs for KvsImpl {
     // getValue Implementation
     async fn get(&self, request: Request<KeyValuePair>) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
-        let value = match get_value(message.clone().key) {
-            Ok(value) => value,
-            Err(e) => return Err(Status::not_found(e)),
-        };
-
+        // sanitize key
+        let key: String = message.clone().key.trim().to_string();
+        // Check key
+        if !input_validation::validate_key(key.clone()) {
+            return Err(Status::invalid_argument("Key invalid."));
+        }
+        let mut value: String = String::new();
+        // If JSON Backend is used load from HashMap, otherwise load from file
+        if self.backend == BACKEND_JSON {
+            value = match json_store::get_value(key.clone()) {
+                Ok(value) => value,
+                Err(e) => return Err(Status::not_found(e)),
+            };
+        } else if self.backend == BACKEND_FILE {
+            value = match file_store::get_value(key.clone(), self.storage_path.clone()) {
+                Ok(value) => value,
+                Err(e) => return Err(Status::not_found(e)),
+            };
+        }
+        // Create response message
         let response_message: KeyValuePair = KeyValuePair {
-            key: message.clone().key,
+            key: key,
             value: value,
         };
         Ok(Response::new(response_message))
@@ -83,13 +122,25 @@ impl Kvs for KvsImpl {
         request: Request<KeyValuePair>,
     ) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
+        // sanitize key
+        let key: String = message.clone().key.trim().to_string();
+        // Check key
+        if !input_validation::validate_key(key.clone()) {
+            return Err(Status::invalid_argument("Key invalid."));
+        }
+        // Create QueueAction and send it to queue
         let action: QueueAction = QueueAction {
-            kv: message.clone(),
+            kv: KeyValuePair {
+                key: key.clone(),
+                value: "".to_string(),
+            },
             action: ACTION_DELETE,
         };
         self.send_queue.send(action).unwrap();
+
+        // Create response message
         let response_message: KeyValuePair = KeyValuePair {
-            key: message.clone().key,
+            key: key,
             value: "".to_string(),
         };
         Ok(Response::new(response_message))
@@ -102,6 +153,8 @@ pub fn start_grpc_server(
     port: String,
     enable_tls: bool,
     send_queue: Sender<QueueAction>,
+    backend: u8,
+    storage_path: String,
 ) -> Result<(), Box<dyn std::error::Error>> {
     let socket: SocketAddr = format!("{}:{}", ip, port).parse().unwrap();
 
@@ -121,6 +174,8 @@ pub fn start_grpc_server(
 
         let kvs = KvsImpl {
             send_queue: send_queue,
+            backend: backend,
+            storage_path: storage_path,
         };
 
         let mut rt = Runtime::new().expect("failed to obtain a new RunTime object");
@@ -133,6 +188,8 @@ pub fn start_grpc_server(
     } else {
         let kvs = KvsImpl {
             send_queue: send_queue,
+            backend: backend,
+            storage_path: storage_path,
         };
         println!("gRPC listening on {}", socket);
         let mut rt = Runtime::new().expect("failed to obtain a new RunTime object");

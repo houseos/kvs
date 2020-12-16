@@ -15,27 +15,27 @@ pub fn validate_key(input: String) -> bool {
     lazy_static! {
         static ref RE_KEY: Regex = Regex::new(r"^\w*$").unwrap();
     }
-    let trimmed_input = input.trim();
     // Check length
-    if trimmed_input.len() < KEY_LEN_MIN || trimmed_input.len() > KEY_LEN_MAX {
+    if input.len() < KEY_LEN_MIN || input.len() > KEY_LEN_MAX {
         return false;
     }
     // Check regex
-    RE_KEY.is_match(&trimmed_input)
+    RE_KEY.is_match(&input)
 }
 
-pub fn validate_value(input: String) -> bool {
+pub fn validate_value(input: String, check_length: bool) -> bool {
     lazy_static! {
         // Allow only characters defined in Base64 alphabet (RFC4648)
         static ref RE_KEY: Regex = Regex::new(r"^[\w+/=]*$").unwrap();
     }
-    let trimmed_input = input.trim();
     // Check length
-    if trimmed_input.len() < VALUE_LEN_MIN || trimmed_input.len() > VALUE_LEN_MAX {
-        return false;
+    if check_length {
+        if input.len() < VALUE_LEN_MIN || input.len() > VALUE_LEN_MAX {
+            return false;
+        }
     }
     // Check regex
-    RE_KEY.is_match(&trimmed_input)
+    RE_KEY.is_match(&input)
 }
 
 pub fn validate_path(input: String) -> bool {
@@ -43,9 +43,8 @@ pub fn validate_path(input: String) -> bool {
         // Allow only alphanumeric characters as well as "/", "\", ":" and "."
         static ref RE_KEY: Regex = Regex::new(r"^[\w/\\.:-]*$").unwrap();
     }
-    let trimmed_input = input.trim();
     // Check regex
-    RE_KEY.is_match(&trimmed_input)
+    RE_KEY.is_match(&input)
 }
 
 pub fn validate_ipv4(input: String) -> bool {
@@ -54,19 +53,18 @@ pub fn validate_ipv4(input: String) -> bool {
         static ref RE_IP: Regex =
             Regex::new(r"^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})$").unwrap();
     }
-    let trimmed_input = input.trim();
     // Shortes "0.0.0.0" = 7, longest "255.255.255.255" = 15
-    if trimmed_input.len() < 7 || trimmed_input.len() > 15 {
+    if input.len() < 7 || input.len() > 15 {
         println!("IP length invalid");
         return false;
     }
     //Check regex
-    if !RE_IP.is_match(&trimmed_input) {
+    if !RE_IP.is_match(&input) {
         return false;
     }
     // Check range of all fields
     // Split string
-    let octets: Vec<&str> = trimmed_input.split('.').collect();
+    let octets: Vec<&str> = input.split('.').collect();
     // Check range from 0 to 255 of each octet
     for octet in octets {
         if octet.parse::<i16>().unwrap() < 0 || octet.parse::<u16>().unwrap() > 255 {
@@ -81,16 +79,15 @@ pub fn validate_port(input: String) -> bool {
     lazy_static! {
         static ref RE_IP: Regex = Regex::new(r"^(\d*)$").unwrap();
     }
-    let trimmed_input = input.trim();
     // Shortes "0" = 1, longest "65534" =
-    if trimmed_input.len() < 1 || trimmed_input.len() > 5 {
+    if input.len() < 1 || input.len() > 5 {
         println!("Port length invalid");
         return false;
     }
     //Check regex
-    if RE_IP.is_match(&trimmed_input) {
+    if RE_IP.is_match(&input) {
         // Parse if only digits
-        let value: i32 = trimmed_input.parse().unwrap();
+        let value: i32 = input.parse().unwrap();
         // Check range from 0 to 65534
         if value < 65535 && value > 0 {
             true
@@ -168,11 +165,11 @@ mod tests {
     // ============== Value Validation ===============================
     #[test]
     fn input_validation_value_lower_length_boundary_ok() {
-        assert_eq!(validate_value("t".to_string()), true)
+        assert_eq!(validate_value("t".to_string(), true), true)
     }
     #[test]
     fn input_validation_value_lower_length_boundary_failed() {
-        assert_eq!(validate_value("".to_string()), false)
+        assert_eq!(validate_value("".to_string(), true), false)
     }
     #[test]
     fn input_validation_value_upper_length_boundary_ok() {
@@ -180,7 +177,7 @@ mod tests {
         for _x in 0..VALUE_LEN_MAX {
             test = test + "1";
         }
-        assert_eq!(validate_value(test), true)
+        assert_eq!(validate_value(test, true), true)
     }
     #[test]
     fn input_validation_value_upper_length_boundary_failed() {
@@ -188,7 +185,7 @@ mod tests {
         for _x in 0..VALUE_LEN_MAX + 1 {
             test = test + "1";
         }
-        assert_eq!(validate_value(test), false)
+        assert_eq!(validate_value(test, true), false)
     }
     #[test]
     fn input_validation_value_random_base64_string_repeated() {
@@ -216,10 +213,10 @@ mod tests {
 
             if base64_string_len < VALUE_LEN_MIN || base64_string_len > VALUE_LEN_MAX {
                 // If string length does not fit, expect fail
-                assert_eq!(validate_value(base64_string), false)
+                assert_eq!(validate_value(base64_string, true), false)
             } else {
                 // If string length fits expect ok
-                assert_eq!(validate_value(base64_string), true)
+                assert_eq!(validate_value(base64_string, true), true)
             }
         }
     }

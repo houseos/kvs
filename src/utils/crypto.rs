@@ -16,9 +16,10 @@ use sha3::{Digest, Sha3_512};
 // Base64 en-/decoding
 use base64;
 
-const DV_LEN: usize = 32;
-// IV Length in bytes according to BSI TR-02102-1 (Version 2020-1)
-const IV_LEN: usize = 12;
+// Derivation Value length
+pub const DV_LEN: usize = 32;
+// AES 256 GCM Initialization Vector length in bytes according to BSI TR-02102-1 (Version 2020-1)
+pub const IV_LEN: usize = 12;
 
 #[derive(Debug)]
 pub struct Credentials {
@@ -71,7 +72,7 @@ impl TrustStore {
 }
 
 // Generate random string of length DV_LEN
-fn generate_derivation_value() -> String {
+pub fn generate_derivation_value() -> String {
     const CHARSET: &[u8] = b"abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     let mut rng = rand::thread_rng();
 
@@ -86,7 +87,7 @@ fn generate_derivation_value() -> String {
 }
 
 // Generate random string of length IV_LEN
-fn generate_initialization_vector() -> [u8; IV_LEN] {
+pub fn generate_initialization_vector() -> [u8; IV_LEN] {
     let mut rng = rand::thread_rng();
 
     // generate random string
@@ -95,7 +96,9 @@ fn generate_initialization_vector() -> [u8; IV_LEN] {
     return derivation_value;
 }
 
-fn derive_password(derivation_value: String) -> String {
+// Derive password from given string.
+// TODO: Currently implemented by using a hash, later libuta will be used
+pub fn derive_password(derivation_value: String) -> String {
     // create a SHA3-256 object
     let mut hasher = Sha3_512::new();
 
@@ -109,10 +112,10 @@ fn derive_password(derivation_value: String) -> String {
     _password
 }
 
-// Encrypt plaintext string using provided derived password and IV
-fn aes_256_gcm_siv_encrypt(derived_password: String, iv: Vec<u8>, plaintext: String) -> Vec<u8> {
-    // load key from derived password
-    let key = GenericArray::from_slice(derived_password.as_bytes());
+// Encrypt plaintext string using provided secret and IV
+fn aes_256_gcm_siv_encrypt(secret: String, iv: Vec<u8>, plaintext: String) -> Vec<u8> {
+    // load key from secret
+    let key = GenericArray::from_slice(secret.as_bytes());
     // Initialize AES256GCM
     let cipher = Aes256GcmSiv::new(key);
     // Set the noce to the IV
@@ -123,9 +126,10 @@ fn aes_256_gcm_siv_encrypt(derived_password: String, iv: Vec<u8>, plaintext: Str
         .expect("encryption failure!")
 }
 
-fn aes_256_gcm_siv_decrypt(derived_password: String, iv: Vec<u8>, ciphertext: Vec<u8>) -> Vec<u8> {
-    // load key from derived password
-    let key = GenericArray::from_slice(derived_password.as_bytes());
+// Decrypt ciphertext string using provided secret and IV
+fn aes_256_gcm_siv_decrypt(secret: String, iv: Vec<u8>, ciphertext: Vec<u8>) -> Vec<u8> {
+    // load key from secret
+    let key = GenericArray::from_slice(secret.as_bytes());
     // Initialize AES256GCM
     let cipher = Aes256GcmSiv::new(key);
     // Set the noce to the IV
@@ -155,6 +159,7 @@ pub fn json_encrypt(plaintext: String) -> String {
     )
 }
 
+// Decrypt function wrapper for JSON Backend
 pub fn json_decrypt(ciphertext: String) -> String {
     // Split ciphertext to three sections
     let v: Vec<&str> = ciphertext.split("$").collect();
@@ -166,6 +171,32 @@ pub fn json_decrypt(ciphertext: String) -> String {
     let encrypted_text = base64::decode(v[2]).unwrap();
     // Decrypt
     let plaintext = aes_256_gcm_siv_decrypt(derived_password, decoded_iv, encrypted_text);
+    // Return decrypted text
+    return str::from_utf8(&plaintext).unwrap().to_string();
+}
+
+// Encrypt function wrapper for File Backend
+pub fn file_encrypt(plaintext: String, dv: String, iv: String) -> String {
+    // derive secret
+    let secret: String = derive_password(dv);
+    // decode IV
+    let initialization_vector: Vec<u8> = base64::decode(iv).unwrap();
+    // encrypt string
+    let ciphertext: Vec<u8> = aes_256_gcm_siv_encrypt(secret, initialization_vector, plaintext);
+    // base64 encode Vec<u8>
+    base64::encode(ciphertext)
+}
+
+// Decrypt function wrapper for File Backend
+pub fn file_decrypt(base64_ciphertext: String, dv: String, iv: String) -> String {
+    // base64 decode string
+    let ciphertext: Vec<u8> = base64::decode(base64_ciphertext).unwrap();
+    // derive secret
+    let secret: String = derive_password(dv);
+    // decode IV
+    let initialization_vector: Vec<u8> = base64::decode(iv).unwrap();
+    // decrypt Vec<8u>
+    let plaintext: Vec<u8> = aes_256_gcm_siv_decrypt(secret, initialization_vector, ciphertext);
     // Return decrypted text
     return str::from_utf8(&plaintext).unwrap().to_string();
 }

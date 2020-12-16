@@ -14,10 +14,12 @@ extern crate two_lock_queue;
 
 //kvs modules
 mod grpc;
-mod json_store;
+mod store;
 use crate::utils::filesystem_wrapper;
 use crate::utils::input_validation;
-use json_store::QueueAction;
+use store::file_store;
+use store::json_store;
+use store::store_actions::QueueAction;
 use utils;
 
 // CLI interface
@@ -26,6 +28,10 @@ use clap::{App, Arg};
 
 // CLI Signal handling
 extern crate ctrlc;
+
+// Supported backends
+const BACKEND_JSON: u8 = 0;
+const BACKEND_FILE: u8 = 1;
 
 fn main() {
     // Properly handle CTRL-C signals
@@ -59,6 +65,14 @@ fn main() {
             .required(false)
             .long("path")
             .takes_value(true),
+        )
+        .arg(
+            Arg::with_name("backend")
+            .help("Backend to be used, either \"json\" or \"file\".")
+            .required(false)
+            .long("backend")
+            .takes_value(true)
+            .possible_values(&["json", "file"]),
         )
         .arg(
             Arg::with_name("tls")
@@ -106,17 +120,42 @@ fn main() {
             std::process::exit(0x0001);
         }
     }
+    // Set backend, json is default
+    let mut backend: u8 = BACKEND_JSON;
+
+    if matches.is_present("backend") {
+        let backend_value = matches.value_of("backend").unwrap();
+        if backend_value == "file" {
+            backend = BACKEND_FILE;
+        }
+    }
+
     // Read persistent store from file
-    match json_store::initialize_store_from_file(path.clone()) {
-        Ok(ok) => println!("Finished loading file: {}", ok),
-        Err(e) => eprintln!("Error loading file: {}", e),
+    if backend == BACKEND_JSON {
+        match json_store::initialize_store_from_file(path.clone()) {
+            Ok(ok) => println!("Finished loading file: {}", ok),
+            Err(e) => eprintln!("Error loading file: {}", e),
+        }
+    } else if backend == BACKEND_FILE {
+        match file_store::load_meta_data_from_file(path.clone()) {
+            Ok(ok) => println!("Finished loading file: {}", ok),
+            Err(e) => eprintln!("Error loading file: {}", e),
+        }
     }
 
     let (tx, rx) = two_lock_queue::unbounded::<QueueAction>();
 
     // Start the gRPC Server in a thread
+    let grpc_path = path.clone();
     thread::spawn(move || {
-        match grpc::start_grpc_server(ip, port, matches.is_present("tls"), tx.clone()) {
+        match grpc::start_grpc_server(
+            ip,
+            port,
+            matches.is_present("tls"),
+            tx.clone(),
+            backend,
+            grpc_path,
+        ) {
             Ok(o) => {
                 println!("{:?}", o);
             }
@@ -130,7 +169,11 @@ fn main() {
     // Start the store handler in a thread
     let child = thread::spawn(move || loop {
         let action = rx.recv().unwrap();
-        json_store::handle_action(action, path.clone());
+        if backend == BACKEND_JSON {
+            json_store::handle_action(action, path.clone());
+        } else if backend == BACKEND_FILE {
+            file_store::handle_action(action, path.clone());
+        }
     });
 
     //Run infinitely, until CTRL+C

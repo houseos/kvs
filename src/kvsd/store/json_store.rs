@@ -16,21 +16,14 @@ use lazy_static::lazy_static;
 use serde::{Deserialize, Serialize};
 
 // kvs modules
-use crate::grpc::kvs_api::KeyValuePair;
+use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
 use crate::utils::crypto::{json_decrypt, json_encrypt};
 use crate::utils::filesystem_wrapper::{
     read_persistent_store_file_to_string, write_persistent_store_file_from_string,
 };
 
-// Available Actions
-pub const ACTION_STORE: u8 = 0;
-pub const ACTION_DELETE: u8 = 1;
-
-// Action for the two_lock_queue
-pub struct QueueAction {
-    pub kv: KeyValuePair,
-    pub action: u8,
-}
+// Constants
+const MAP_SIZE_MAX: usize = 10000;
 
 // Map Struct containing the HashMap of all entries
 #[derive(Deserialize, Serialize)]
@@ -45,8 +38,9 @@ lazy_static! {
     });
 }
 
+// Check size of HashMap, more than 10k elements are not allowed.
 pub fn is_store_full() -> bool {
-    if STORE.read().unwrap().elements.len() >= 10000 {
+    if STORE.read().unwrap().elements.len() >= MAP_SIZE_MAX {
         return true;
     }
     false
@@ -60,10 +54,12 @@ pub fn handle_action(action: QueueAction, path: String) {
                 "Storing key \"{}\" with value \"{}\".",
                 action.kv.key, action.kv.value
             );
+            // Forward to specific handle function.
             store_action(action, path);
         }
         ACTION_DELETE => {
             println!("Deleting key \"{}\".", action.kv.key);
+            // Forward to specific handle function.
             delete_action(action, path);
         }
         _ => {
@@ -72,6 +68,7 @@ pub fn handle_action(action: QueueAction, path: String) {
     }
 }
 
+// Handle store QueueAction
 fn store_action(action: QueueAction, path: String) {
     STORE
         .write()
@@ -82,9 +79,10 @@ fn store_action(action: QueueAction, path: String) {
         Ok(j) => j,
         Err(_e) => return eprintln!("Error serializing hashmap."),
     };
-    write_persistent_store_file_from_string(path, j.as_bytes());
+    write_persistent_store_file_from_string(path, j);
 }
 
+// Handle delete QueueAction
 fn delete_action(action: QueueAction, path: String) {
     STORE
         .write()
@@ -95,7 +93,7 @@ fn delete_action(action: QueueAction, path: String) {
         Ok(j) => j,
         Err(_e) => return eprintln!("Error serializing hashmap."),
     };
-    write_persistent_store_file_from_string(path, j.as_bytes());
+    write_persistent_store_file_from_string(path, j);
 }
 
 // Reading from the HashMap is possible without the queue
