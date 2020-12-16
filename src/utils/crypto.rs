@@ -13,9 +13,6 @@ use aes_gcm_siv::Aes256GcmSiv;
 use rand::{Rng, RngCore};
 use sha3::{Digest, Sha3_512};
 
-// Base64 en-/decoding
-use base64;
-
 // Derivation Value length
 pub const DV_LEN: usize = 32;
 // AES 256 GCM Initialization Vector length in bytes according to BSI TR-02102-1 (Version 2020-1)
@@ -63,7 +60,7 @@ impl TrustStore {
             Ok(c) => c,
             Err(e) => return Err(Box::new(e)),
         };
-        Ok(TrustStore { ca_cert: ca_cert })
+        Ok(TrustStore { ca_cert })
     }
 
     pub fn get_trusted_certificate(&self) -> &[u8] {
@@ -83,7 +80,7 @@ pub fn generate_derivation_value() -> String {
             CHARSET[idx] as char
         })
         .collect();
-    return derivation_value;
+    derivation_value
 }
 
 // Generate random string of length IV_LEN
@@ -93,7 +90,7 @@ pub fn generate_initialization_vector() -> [u8; IV_LEN] {
     // generate random string
     let mut derivation_value: [u8; IV_LEN] = [0; IV_LEN];
     rng.fill_bytes(&mut derivation_value);
-    return derivation_value;
+    derivation_value
 }
 
 // Derive password from given string.
@@ -162,7 +159,7 @@ pub fn json_encrypt(plaintext: String) -> String {
 // Decrypt function wrapper for JSON Backend
 pub fn json_decrypt(ciphertext: String) -> String {
     // Split ciphertext to three sections
-    let v: Vec<&str> = ciphertext.split("$").collect();
+    let v: Vec<&str> = ciphertext.split('$').collect();
     // Derived password is in first section
     let derived_password = derive_password(v[0].to_string());
     // Second section contains IV

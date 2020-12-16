@@ -28,7 +28,7 @@ pub mod kvs_api {
 use crate::store::file_store;
 use crate::store::json_store;
 use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
-use crate::utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
+use utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
 
 // Supported backends
 const BACKEND_JSON: u8 = 0;
@@ -51,8 +51,8 @@ impl Kvs for KvsImpl {
     ) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
         // sanitize key and value
-        let key: String = message.clone().key.trim().to_string();
-        let value: String = message.clone().value.trim().to_string();
+        let key: String = message.key.trim().to_string();
+        let value: String = message.value.trim().to_string();
 
         // Check key
         if !input_validation::validate_key(key.clone()) {
@@ -68,19 +68,14 @@ impl Kvs for KvsImpl {
             return Err(Status::invalid_argument("Value invalid."));
         }
         // Check size of store if JSON Backend is used
-        if self.backend == BACKEND_JSON {
-            if json_store::is_store_full() {
-                return Err(Status::resource_exhausted(
-                    "Can not store more key value pairs, limit of 10.000 reached.",
-                ));
-            }
+        if self.backend == BACKEND_JSON && json_store::is_store_full() {
+            return Err(Status::resource_exhausted(
+                "Can not store more key value pairs, limit of 10.000 reached.",
+            ));
         }
         // Create QueueAction and send it to queue
         let action: QueueAction = QueueAction {
-            kv: KeyValuePair {
-                key: key,
-                value: value,
-            },
+            kv: KeyValuePair { key, value },
             action: ACTION_STORE,
         };
         self.send_queue.send(action).unwrap();
@@ -91,7 +86,7 @@ impl Kvs for KvsImpl {
     async fn get(&self, request: Request<KeyValuePair>) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
         // sanitize key
-        let key: String = message.clone().key.trim().to_string();
+        let key: String = message.key.trim().to_string();
         // Check key
         if !input_validation::validate_key(key.clone()) {
             return Err(Status::invalid_argument("Key invalid."));
@@ -110,10 +105,7 @@ impl Kvs for KvsImpl {
             };
         }
         // Create response message
-        let response_message: KeyValuePair = KeyValuePair {
-            key: key,
-            value: value,
-        };
+        let response_message: KeyValuePair = KeyValuePair { key, value };
         Ok(Response::new(response_message))
     }
     // deleteKey Implementation
@@ -123,7 +115,7 @@ impl Kvs for KvsImpl {
     ) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
         // sanitize key
-        let key: String = message.clone().key.trim().to_string();
+        let key: String = message.key.trim().to_string();
         // Check key
         if !input_validation::validate_key(key.clone()) {
             return Err(Status::invalid_argument("Key invalid."));
@@ -140,7 +132,7 @@ impl Kvs for KvsImpl {
 
         // Create response message
         let response_message: KeyValuePair = KeyValuePair {
-            key: key,
+            key,
             value: "".to_string(),
         };
         Ok(Response::new(response_message))
@@ -173,9 +165,9 @@ pub fn start_grpc_server(
             Identity::from_pem(credentials.get_certificate(), credentials.get_private_key());
 
         let kvs = KvsImpl {
-            send_queue: send_queue,
-            backend: backend,
-            storage_path: storage_path,
+            send_queue,
+            backend,
+            storage_path,
         };
 
         let mut rt = Runtime::new().expect("failed to obtain a new RunTime object");
@@ -187,9 +179,9 @@ pub fn start_grpc_server(
             .expect("failed to successfully run the future on RunTime");
     } else {
         let kvs = KvsImpl {
-            send_queue: send_queue,
-            backend: backend,
-            storage_path: storage_path,
+            send_queue,
+            backend,
+            storage_path,
         };
         println!("gRPC listening on {}", socket);
         let mut rt = Runtime::new().expect("failed to obtain a new RunTime object");

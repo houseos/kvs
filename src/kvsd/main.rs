@@ -15,12 +15,11 @@ extern crate two_lock_queue;
 //kvs modules
 mod grpc;
 mod store;
-use crate::utils::filesystem_wrapper;
-use crate::utils::input_validation;
 use store::file_store;
 use store::json_store;
 use store::store_actions::QueueAction;
-use utils;
+use utils::filesystem_wrapper;
+use utils::input_validation;
 
 // CLI interface
 extern crate clap;

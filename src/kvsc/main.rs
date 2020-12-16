@@ -148,7 +148,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("store", Some(sub_m)) => {
             // Perform input validation on options
             if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string())
-                || !input_validation::validate_value(sub_m.value_of("value").unwrap().to_string())
+                || !input_validation::validate_value(
+                    sub_m.value_of("value").unwrap().to_string(),
+                    false,
+                )
             {
                 eprintln!("Provided key or value invalid.");
                 std::process::exit(0x0001);
@@ -157,10 +160,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let key = sub_m.value_of("key").unwrap().to_string();
             let value = sub_m.value_of("value").unwrap().to_string();
             // creating a new Request
-            let request = tonic::Request::new(KeyValuePair {
-                key: key,
-                value: value,
-            });
+            let request = tonic::Request::new(KeyValuePair { key, value });
             // Send request and handle response
             match client.store(request).await {
                 Ok(response) => {
@@ -183,7 +183,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let key = sub_m.value_of("key").unwrap().to_string();
             // creating a new Request
             let request = tonic::Request::new(KeyValuePair {
-                key: key,
+                key,
                 value: "".to_string(),
             });
             // Send request and handle response
@@ -208,7 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             let key = sub_m.value_of("key").unwrap().to_string();
             // creating a new Request
             let request = tonic::Request::new(KeyValuePair {
-                key: key,
+                key,
                 value: "".to_string(),
             });
 

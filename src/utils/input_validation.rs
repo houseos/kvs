@@ -29,10 +29,8 @@ pub fn validate_value(input: String, check_length: bool) -> bool {
         static ref RE_KEY: Regex = Regex::new(r"^[\w+/=]*$").unwrap();
     }
     // Check length
-    if check_length {
-        if input.len() < VALUE_LEN_MIN || input.len() > VALUE_LEN_MAX {
-            return false;
-        }
+    if check_length && input.len() < VALUE_LEN_MIN || input.len() > VALUE_LEN_MAX {
+        return false;
     }
     // Check regex
     RE_KEY.is_match(&input)
@@ -80,7 +78,7 @@ pub fn validate_port(input: String) -> bool {
         static ref RE_IP: Regex = Regex::new(r"^(\d*)$").unwrap();
     }
     // Shortes "0" = 1, longest "65534" =
-    if input.len() < 1 || input.len() > 5 {
+    if input.is_empty() || input.len() > 5 {
         println!("Port length invalid");
         return false;
     }
@@ -89,11 +87,7 @@ pub fn validate_port(input: String) -> bool {
         // Parse if only digits
         let value: i32 = input.parse().unwrap();
         // Check range from 0 to 65534
-        if value < 65535 && value > 0 {
-            true
-        } else {
-            false
-        }
+        value < 65535 && value > 0
     } else {
         false
     }

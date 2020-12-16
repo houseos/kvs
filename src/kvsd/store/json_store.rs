@@ -17,8 +17,8 @@ use serde::{Deserialize, Serialize};
 
 // kvs modules
 use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
-use crate::utils::crypto::{json_decrypt, json_encrypt};
-use crate::utils::filesystem_wrapper::{
+use utils::crypto::{json_decrypt, json_encrypt};
+use utils::filesystem_wrapper::{
     read_persistent_store_file_to_string, write_persistent_store_file_from_string,
 };
 
@@ -112,13 +112,13 @@ pub fn initialize_store_from_file(path: String) -> Result<String, String> {
     if !Path::new(&format!("{}/store.json", path)).exists() {
         return Ok("No persistent file available.".to_string());
     }
-    let json_string = match read_persistent_store_file_to_string(format!("{}", path)) {
+    let json_string = match read_persistent_store_file_to_string(path) {
         Ok(json) => json,
         Err(e) => return Err(format!("Could not read persistent data file: {}", e)),
     };
     let v: HashMap<String, String> = match serde_json::from_str(json_string.as_str()) {
         Ok(val) => val,
-        Err(e) => return Err(format!("Could not parse json: {}", e).to_string()),
+        Err(e) => return Err(format!("Could not parse json: {}", e)),
     };
     // for each element in array
     STORE.write().unwrap().elements = v;

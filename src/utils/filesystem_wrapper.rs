@@ -29,7 +29,7 @@ pub fn delete_file(path: String) -> Result<(), io::Error> {
         Ok(_o) => Ok(()),
         Err(e) => {
             eprintln!("Failed deleting file: {}", path);
-            return Err(e);
+            Err(e)
         }
     }
 }

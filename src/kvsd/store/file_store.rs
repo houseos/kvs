@@ -17,11 +17,11 @@ use serde::{Deserialize, Serialize};
 
 // kvs modules
 use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
-use crate::utils::crypto::{
+use utils::crypto::{
     file_decrypt, file_encrypt, generate_derivation_value, generate_initialization_vector,
     json_decrypt, json_encrypt,
 };
-use crate::utils::filesystem_wrapper::{delete_file, read_file_to_string, write_string_to_file};
+use utils::filesystem_wrapper::{delete_file, read_file_to_string, write_string_to_file};
 
 // Value File Meta Data
 #[derive(Deserialize, Serialize)]
@@ -80,8 +80,8 @@ fn store_action(action: QueueAction, path: String) {
         STORE.write().unwrap().elements.insert(
             action.kv.key,
             ValueMetaData {
-                filename: filename,
-                derivation_value: derivation_value,
+                filename,
+                derivation_value,
                 initialization_vector: base64_iv,
             },
         );
@@ -104,8 +104,8 @@ fn store_action(action: QueueAction, path: String) {
         STORE.write().unwrap().elements.insert(
             action.kv.key,
             ValueMetaData {
-                filename: filename,
-                derivation_value: derivation_value,
+                filename,
+                derivation_value,
                 initialization_vector: base64_iv,
             },
         );
@@ -140,20 +140,20 @@ fn delete_action(action: QueueAction, path: String) {
 
 // Reading from the HashMap is possible without the queue
 pub fn get_value(key: String, path: String) -> Result<String, String> {
-    match STORE.read().unwrap().elements.get(key.clone().as_str()) {
+    match STORE.read().unwrap().elements.get(key.as_str()) {
         Some(_value) => {
             // retrieve filename from hashmap
-            let filename = match STORE.read().unwrap().elements.get(key.clone().as_str()) {
+            let filename = match STORE.read().unwrap().elements.get(key.as_str()) {
                 Some(value) => value.filename.clone(),
                 None => "".to_string(),
             };
             // retrieve dv from hashmap
-            let dv = match STORE.read().unwrap().elements.get(key.clone().as_str()) {
+            let dv = match STORE.read().unwrap().elements.get(key.as_str()) {
                 Some(value) => value.derivation_value.clone(),
                 None => "".to_string(),
             };
             // retrieve iv from hashmap
-            let iv = match STORE.read().unwrap().elements.get(key.clone().as_str()) {
+            let iv = match STORE.read().unwrap().elements.get(key.as_str()) {
                 Some(value) => value.initialization_vector.clone(),
                 None => "".to_string(),
             };
@@ -195,7 +195,7 @@ pub fn load_meta_data_from_file(path: String) -> Result<String, String> {
     // parse decrypted string
     let v: HashMap<String, ValueMetaData> = match serde_json::from_str(json_string.as_str()) {
         Ok(val) => val,
-        Err(e) => return Err(format!("Could not parse json: {}", e).to_string()),
+        Err(e) => return Err(format!("Could not parse json: {}", e)),
     };
     // for each element in array
     STORE.write().unwrap().elements = v;
