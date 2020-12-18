@@ -189,6 +189,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Send request and handle response
             match client.get(request).await {
                 Ok(response) => {
+                    println!("{:?}", response);
                     println!("{}", response.into_inner().value);
                     std::process::exit(0x0000);
                 }

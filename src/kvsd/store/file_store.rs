@@ -138,6 +138,11 @@ fn delete_action(action: QueueAction, path: String) {
     save_meta_data_to_file(path);
 }
 
+// Check existence of key
+pub fn key_exists(key: String) -> bool {
+    STORE.read().unwrap().elements.contains_key(key.as_str())
+}
+
 // Reading from the HashMap is possible without the queue
 pub fn get_value(key: String, path: String) -> Result<String, String> {
     match STORE.read().unwrap().elements.get(key.as_str()) {

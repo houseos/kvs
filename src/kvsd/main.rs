@@ -67,7 +67,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("backend")
-            .help("Backend to be used, either \"json\" or \"file\".")
+            .help("Backend to be used. Default: \"json\"\n")
             .required(false)
             .long("backend")
             .takes_value(true)
@@ -75,7 +75,7 @@ fn main() {
         )
         .arg(
             Arg::with_name("tls")
-                .help("Set to enable TLS support for gRPC.\nIf set certificate and private key are expected as grpc.crt\nand grpc.key in the execution directory of kvsc binary.")
+                .help("Set to enable TLS support for gRPC.\nIf set certificate and private key are expected as grpc.crt\nand grpc.key in the execution directory of kvsd binary.")
                 .long("tls"),
         )
         .get_matches();

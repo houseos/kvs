@@ -21,7 +21,6 @@ path = "src/kvsd/main.rs"
 name = "kvsc"
 path = "src/kvsc/main.rs"
 
-
 [dependencies]
 tonic = { version = "0.3", features = ["tls"] }
 prost = "0.6"

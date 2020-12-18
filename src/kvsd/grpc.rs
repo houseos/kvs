@@ -120,6 +120,12 @@ impl Kvs for KvsImpl {
         if !input_validation::validate_key(key.clone()) {
             return Err(Status::invalid_argument("Key invalid."));
         }
+
+        if self.backend == BACKEND_JSON && !json_store::key_exists(key.clone()) {
+            return Err(Status::not_found("Key not found!"));
+        } else if self.backend == BACKEND_FILE && !file_store::key_exists(key.clone()) {
+            return Err(Status::not_found("Key not found!"));
+        }
         // Create QueueAction and send it to queue
         let action: QueueAction = QueueAction {
             kv: KeyValuePair {
