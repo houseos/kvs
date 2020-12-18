@@ -10,14 +10,5 @@ all: clean build
 build:
 		cargo build --release
 
-install:
-		mkdir -p $(DESTDIR)/usr/local/bin/
-		cp  target/release/kvsd  $(DESTDIR)/usr/local/bin/kvsd
-		cp  target/release/kvsc  $(DESTDIR)/usr/local/bin/kvsc
-
 clean:
 		rm -f -r target
-
-uninstall:
-		rm $(DESTDIR)/usr/local/bin/kvsd
-		rm $(DESTDIR)/usr/local/bin/kvsc
