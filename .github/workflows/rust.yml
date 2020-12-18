@@ -37,6 +37,20 @@ jobs:
       with:
         name: kvsc-linux-amd64
         path: ./target/release/kvsc
+    - name: Prepare Debian build
+      run: |
+        sudo apt-get update
+        sudo apt-get install debhelper cargo
+        mkdir -p debian-packaging
+        rsync -av --exclude='debian-packaging' . debian-packaging/
+    - name: Build Debian Package
+      run: |
+        cd debian-packaging
+        dpkg-buildpackage -uc -us
+    - uses: actions/upload-artifact@v1
+      with:
+        name: kvs_0.1.0-0_amd64.deb
+        path: ./kvs_0.1.0-0_amd64.deb
 
   build-windows:
     runs-on: windows-latest

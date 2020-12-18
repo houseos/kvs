@@ -1,0 +1,8 @@
+Format: https://www.debian.org/doc/packaging-manuals/copyright-format/1.0/
+Upstream-Name: kvs
+Upstream-Contact: Benjamin Schilling <benjamin.schilling33@gmail.com>
+Source: https://github.com/HouseOS/kvs
+
+Files: *
+Copyright: 2020 Benjamin Schilling
+License: MIT
