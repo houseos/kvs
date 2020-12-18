@@ -1,0 +1,12 @@
+Source: kvs
+Section: admin
+Priority: optional
+Maintainer: Benjamin Schilling <benjamin.schilling33@gmail.com>
+Build-Depends: cargo
+Standards-Version: 4.0.0
+Homepage: https://github.com/HouseOS/kvs
+
+Package: kvs
+Architecture: any
+Description: Secure Key Value Store
+ Daemon that provides a gRPC interface to accessa key value store and corresponding CLI
