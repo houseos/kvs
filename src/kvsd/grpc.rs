@@ -44,7 +44,7 @@ pub struct KvsImpl {
 
 #[tonic::async_trait]
 impl Kvs for KvsImpl {
-    // storeValue Implementation
+    // store Implementation
     async fn store(
         &self,
         request: Request<KeyValuePair>,
@@ -82,7 +82,7 @@ impl Kvs for KvsImpl {
 
         Ok(Response::new(message))
     }
-    // getValue Implementation
+    // get Implementation
     async fn get(&self, request: Request<KeyValuePair>) -> Result<Response<KeyValuePair>, Status> {
         let message = request.into_inner();
         // sanitize key
@@ -108,7 +108,7 @@ impl Kvs for KvsImpl {
         let response_message: KeyValuePair = KeyValuePair { key, value };
         Ok(Response::new(response_message))
     }
-    // deleteKey Implementation
+    // delete Implementation
     async fn delete(
         &self,
         request: Request<KeyValuePair>,
@@ -121,9 +121,9 @@ impl Kvs for KvsImpl {
             return Err(Status::invalid_argument("Key invalid."));
         }
 
-        if self.backend == BACKEND_JSON && !json_store::key_exists(key.clone()) {
-            return Err(Status::not_found("Key not found!"));
-        } else if self.backend == BACKEND_FILE && !file_store::key_exists(key.clone()) {
+        if self.backend == BACKEND_JSON && !json_store::key_exists(key.clone())
+            || self.backend == BACKEND_FILE && !file_store::key_exists(key.clone())
+        {
             return Err(Status::not_found("Key not found!"));
         }
         // Create QueueAction and send it to queue

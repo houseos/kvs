@@ -6,6 +6,9 @@
 
 #![feature(proc_macro_hygiene, decl_macro)]
 
+// Rust Standard Library
+use std::io::{self, Read};
+
 //tonic
 use tonic::transport::{Certificate, ClientTlsConfig};
 
@@ -21,7 +24,10 @@ use utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
 
 // CLI interface
 extern crate clap;
-use clap::{App, Arg, SubCommand};
+use clap::{App, AppSettings, Arg, SubCommand};
+
+const INPUT_CLI: u8 = 0;
+const INPUT_PIPE: u8 = 1;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -29,6 +35,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let matches = App::new("kvsc")
         .version(clap::crate_version!())
         .author("Benjamin Schilling <benjamin.schilling33@gmail.com>")
+        .setting(AppSettings::SubcommandRequiredElseHelp)
         .arg(
             Arg::with_name("ip")
                 .help("IP address the kvs daemon is bound to.")
@@ -63,7 +70,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 .long("value")
                 .help("Value of the key value pair, max. length 1024.")
                 .takes_value(true)
-                .required(true)
+            )
+            .arg(
+                Arg::with_name("pipe")
+                .long("pipe")
+                .help("Allows piping the value in kvsc, alternative for \"value\".\n(No size restriction with file backend, \nbest used with base64 strings or complete files.)")
             )
         )
         .subcommand(
@@ -147,18 +158,46 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     match matches.subcommand() {
         ("store", Some(sub_m)) => {
             // Perform input validation on options
-            if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string())
-                || !input_validation::validate_value(
-                    sub_m.value_of("value").unwrap().to_string(),
-                    false,
-                )
-            {
-                eprintln!("Provided key or value invalid.");
+            if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string()) {
+                eprintln!("Provided key invalid.");
                 std::process::exit(0x0001);
             }
-            // Get values of options
+            // Check whether either value or pipe are given
+            let mut _value_input: u8 = INPUT_CLI;
+            if sub_m.is_present("value") && !sub_m.is_present("pipe") {
+                _value_input = INPUT_CLI;
+            } else if !sub_m.is_present("value") && sub_m.is_present("pipe") {
+                _value_input = INPUT_PIPE;
+            } else {
+                // If both value and pipe are given exit.
+                eprintln!("Provide either \"value\" or \"pipe\".");
+                std::process::exit(0x0001);
+            }
+            // for value perform input validation
+            if _value_input == INPUT_CLI {
+                if !input_validation::validate_value(
+                    sub_m.value_of("value").unwrap().to_string(),
+                    false,
+                ) {
+                    eprintln!("Provided value invalid.");
+                    std::process::exit(0x0001);
+                }
+            }
+
+            // Get values of arguments
             let key = sub_m.value_of("key").unwrap().to_string();
-            let value = sub_m.value_of("value").unwrap().to_string();
+            let mut value = String::new();
+            if _value_input == INPUT_CLI {
+                value = sub_m.value_of("value").unwrap().to_string();
+            } else {
+                match io::stdin().read_to_string(&mut value) {
+                    Ok(string) => string,
+                    Err(e) => {
+                        eprintln!("Could not read value from stdin: {}.", e);
+                        std::process::exit(0x0001);
+                    }
+                };
+            }
             // creating a new Request
             let request = tonic::Request::new(KeyValuePair { key, value });
             // Send request and handle response
@@ -189,7 +228,6 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Send request and handle response
             match client.get(request).await {
                 Ok(response) => {
-                    println!("{:?}", response);
                     println!("{}", response.into_inner().value);
                     std::process::exit(0x0000);
                 }

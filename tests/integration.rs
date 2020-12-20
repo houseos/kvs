@@ -16,7 +16,7 @@ mod tests {
     use rand::Rng;
 
     // Rust Standard Library
-    use std::process::{Child, Command};
+    use std::process::{Child, Command, Stdio};
 
     // File System
     use std::fs;
@@ -151,16 +151,16 @@ mod tests {
         let value: String = "testvalue".to_string();
 
         // Result
-        let mut result: bool = false;
+        let mut _result: bool = false;
         // Store key
-        result = run_kvsc_store(key.clone(), value);
+        _result = run_kvsc_store(key.clone(), value);
         // Get key
-        result = run_kvsc_get(key.clone());
+        _result = run_kvsc_get(key.clone());
         // Delete key
-        result = run_kvsc_delete(key.clone());
+        _result = run_kvsc_delete(key.clone());
         // Kill kvsd
         kvsd_process.kill().expect("command wasn't running");
-        assert_eq!(result, true);
+        assert_eq!(_result, true);
     }
     // ============== Basic Functionality File Backend ==============
     #[test]
@@ -174,16 +174,16 @@ mod tests {
         let value: String = "testvalue".to_string();
 
         // Result
-        let mut result: bool = false;
+        let mut _result: bool = false;
         // Store key
-        result = run_kvsc_store(key.clone(), value);
+        _result = run_kvsc_store(key.clone(), value);
         // Get key
-        result = run_kvsc_get(key.clone());
+        _result = run_kvsc_get(key.clone());
         // Delete key
-        result = run_kvsc_delete(key.clone());
+        _result = run_kvsc_delete(key.clone());
         // Kill kvsd
         kvsd_process.kill().expect("command wasn't running");
-        assert_eq!(result, true);
+        assert_eq!(_result, true);
     }
     // ============== Client Tests ==============
 
@@ -217,4 +217,105 @@ mod tests {
         kvsd_process.kill().expect("command wasn't running");
         assert_eq!(result, false);
     }
+    // Test piping a file in kvsc store, kvsc getting it and writing it to the filesystem again
+    #[test]
+    fn integration_client_pipe_file() {
+        if cfg!(target_os = "windows") {
+            println!("This test can be executed under linux only, is uses bash commands.");
+            return;
+        }
+        //start clean kvsd
+        let mut kvsd_process = match init_for_file() {
+            Ok(child) => child,
+            Err(()) => return,
+        };
+        // run cat command on file
+        let cat_child = Command::new("cat")
+            .arg("tests/data/test_config_file.ini")
+            .stdout(Stdio::piped())
+            .spawn()
+            .expect("Failed to run \"cat\" process");
+
+        // pipe returned value to kvsc
+        let cat_out = cat_child.stdout.expect("Failed to open cat stdout");
+        let mut _result: bool = false;
+        let status = Command::new("target/release/kvsc")
+            .args(&["store", "--key", "test_config_file.ini", "--pipe"])
+            .stdout(Stdio::from(cat_out))
+            .status()
+            .expect("Failed to start kvsc process.");
+        if status.success() {
+            println!("Storage successful.");
+            _result = true;
+        } else {
+            println!("Storage failed.");
+            _result = false;
+        }
+        // If storing it was successfull,
+        if _result {
+            // Get value using kvsd
+            let kvsc_child = Command::new("target/release/kvsc")
+                .args(&[
+                    "get",
+                    "--key",
+                    "test_config_file.ini",
+                    ">",
+                    "retrieved_config.ini",
+                ])
+                .spawn()
+                .expect("Failed to start kvsc process.");
+            // Pipe value to file
+
+            // compare files
+        }
+
+        // Kill kvsd
+        kvsd_process.kill().expect("command wasn't running");
+        assert_eq!(_result, true);
+    }
+
+    // Test the storage and retrieval of a file (base64 encoded) passed as a command line argument
+
+    // ============== Load Tests ==============
+
+    // Test the maximum amount of entries in a JSON store
+
+    // Test the maximal size of a JSON store entry
+
+    // Test the performance of a JSON store with maximal size
+
+    // Test the file store with 10.000 entries
+
+    // Test the size boundary of the file store
+
+    // Test the performance of the file store with 10.000 entries (each 1 kilobyte)
+    /*
+    #!/bin/bash
+
+    # clean up store
+    rm -r ../target/release/store.json
+
+    # Initialize kvsd using kvsc with 10.000 entries.
+    echo "Initialize kvsd with 1000 entries"
+    for ((i=0;i<10000;i++))
+    do
+      ../target/release/kvsc store --key "key$i" --value "$VALUE$i" > /dev/null 2>&1
+    done
+
+    # request random values and measure time
+    echo "Request random values"
+    for ((i=9900;i<9910;i++))
+    do
+      START_TIME=$(date +%s.%N)
+      ../target/release/kvsc get --key "key$i"
+      END_TIME=$(date +%s.%N)
+      TIME_DIFF=$(echo "$END_TIME - $START_TIME" | bc)
+      echo "---- Get key$i ----"
+      echo "$TIME_DIFF"
+    done
+        */
+
+    // Test the performance of the file store with 10.000 entries (each 1 megabyte)
+
+    // Test the performance of the file store with 10.000 entries (each biggest size)
 }

@@ -50,10 +50,7 @@ pub fn is_store_full() -> bool {
 pub fn handle_action(action: QueueAction, path: String) {
     match action.action {
         ACTION_STORE => {
-            println!(
-                "Storing key \"{}\" with value \"{}\".",
-                action.kv.key, action.kv.value
-            );
+            println!("Storing key \"{}\".", action.kv.key);
             // Forward to specific handle function.
             store_action(action, path);
         }
