@@ -115,7 +115,7 @@ mod tests {
     #[test]
     fn integration_client_pipe_file() {
         if cfg!(target_os = "windows") {
-            println!("This test can be executed under linux only, is uses bash commands.");
+            println!("This test can be executed under linux only, it uses bash commands.");
             return;
         }
         //start clean kvsd
@@ -125,7 +125,7 @@ mod tests {
         };
         // run cat command on file
         let cat_child = Command::new("cat")
-            .arg("tests/data/test_config_file.ini")
+            .arg("srd/tests/data/test_config_file.ini")
             .stdout(Stdio::piped())
             .spawn()
             .expect("Failed to run \"cat\" process");
@@ -206,7 +206,7 @@ mod tests {
         }
         println!("Comparing retrieved file to original:");
         // Compare files
-        let mut original = match File::open("tests/data/test_config_file.ini") {
+        let mut original = match File::open("srd/tests/data/test_config_file.ini") {
             Ok(f) => f,
             Err(e) => panic!("{}", e),
         };
