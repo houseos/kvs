@@ -65,6 +65,8 @@ jobs:
     - name: Build exe
       run: |
         cargo build --release
+    - name: Run tests
+      run: cargo test  --release -- --test-threads=1
     - uses: actions/upload-artifact@v1
       with:
         name: kvsd.exe
