@@ -1,3 +1,7 @@
+#  kvs Cargo.toml
+#  SPDX-License-Identifier: MIT
+#  Copyright (C) 2020 Benjamin Schilling
+
 [package]
 name = "kvs"
 description = "Secure Key Value Store"

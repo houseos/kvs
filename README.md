@@ -1,9 +1,9 @@
 # kvs - Secure Key Value Store
 
 Have you ever implemented an application that had to store data persistently?
-Have you ever been afraid of the confidentiality of this information?
+Have you ever been afraid of the confidentiality and integrity of this data?
 
-Using **kvs** you can store your data protected by AES-256-GCM using hardware bound passwords.
+Using **kvs** you can store your data protected by AES-256-GCM-SIV using hardware bound passwords.
 
 The key-value-store-daemon **kvsd** takes care of storing your data and encrypting it at rest.
 It provides a simple to use [gRPC](https://gRPC.io) interface that can be used in nearly any programming language.
@@ -26,12 +26,15 @@ FLAGS:
     -h, --help       Prints help information
         --tls        Set to enable TLS support for gRPC.
                      If set certificate and private key are expected as grpc.crt
-                     and grpc.key in the execution directory of kvsc binary.
+                     and grpc.key in the execution directory of kvsd binary.    
     -V, --version    Prints version information
 
 OPTIONS:
-        --ip <ip>        IP address the kvs daemon shall bind the gRPC interface to.
-        --port <port>    Port the kvs daemon shall bind the gRPC interface to.
+        --backend <backend>    Backend to be used. Default: "json"
+                                [possible values: json, file]
+        --ip <ip>              IP address the kvs daemon shall bind the gRPC interface to.
+        --path <path>          Filesystem path for the persistent store.
+        --port <port>          Port the kvs daemon shall bind the gRPC interface to.
 ```
 
 ### kvsc
@@ -41,7 +44,7 @@ kvsc 0.1.0
 Benjamin Schilling <benjamin.schilling33@gmail.com>
 
 USAGE:
-    kvsc.exe [FLAGS] [OPTIONS] [SUBCOMMAND]
+    kvsc.exe [FLAGS] [OPTIONS] <SUBCOMMAND>
 
 FLAGS:
     -h, --help       Prints help information
@@ -108,6 +111,8 @@ The gRPC code is generated during build using the `build.rs` build script.
 > **Hint:**
 > Use the **`Markdown Preview Enhanced`** vscode plugin to render the PlantUML drawings.
 
+The kvsd runs on a device. 
+
 ```puml
 caption System Component Diagram
 
@@ -138,10 +143,126 @@ app -- gRPC
 
 ```
 
+The kvsd consists of three threads.
+The main thread handling all commandline arguments, the gRPC server receiving action via gRPC and the action queue that prevents concurrent writes (and deletes) to the store.
+
+```puml
+@startuml
+caption Sequence Diagram
+
+skinparam monochrome true
+
+participant ":client\n(e.g. kvsc)" as client
+
+box "kvsd"
+participant ":Main" as main
+participant ":gRPC Server" as grpc
+participant ":Store" as queue
+
+activate main
+
+main -> main: Parse command line arguments
+main -> queue: Initialize
+activate queue
+queue -> queue: Parse persistent store depending on backend
+queue --> main: Initialize
+deactivate queue
+main -> grpc: Start gRPC server
+activate grpc
+main -> queue: Start store action handler according to backend
+activate queue
+
+client -> grpc: Store(key, value)
+activate grpc
+grpc -> grpc: Validate input
+grpc ->> queue: Dispatch store action
+activate queue
+grpc --> client: Store(key,value)
+deactivate grpc
+queue -> queue: Prepare encryption
+queue -> queue: Encrypt and store
+deactivate queue
+
+client -> grpc: Get(key)
+activate grpc
+grpc -> grpc: Validate input
+grpc -> grpc: Get value
+grpc --> client: Get(key): Value
+deactivate grpc
+
+client -> grpc: Delete(key)
+activate grpc
+grpc -> grpc: Validate input
+grpc ->> queue: Dispatch delete action
+activate queue
+grpc --> client: Delete(key)
+deactivate grpc
+queue -> queue: Delete key & value
+deactivate queue
+@enduml
+
+```
+
+
 The kvsd is intended for embedded or industrial use cases where the hardware is limited but not too restricted. 
 It can also be used in more powerful systems allowing more stored data.
 
+## Security
 
+This chapter describes the security goals of this project and how they are achieved.
+
+**Goals:**
+
+1. Data stored in the kvsd might be confidential, e.g. key material used by other processes or sensitive personal data.
+2. Data stored in the kvsd must not be manipulated, e.g. configuration values of other services.
+
+### Protecting data at rest
+
+The data used by the kvsd is protected against manipulation and unallowed access.
+For this purpose the data is encrypted using AES-256-GCM.
+To not rely on password that is supplied via commandline or stored in a hard-coded file,
+password derivation is used.
+For this purpose the kvsd integrates [*siemens/libuta*](https://github.com/siemens/libuta).
+It uses it to derive hardware bound passwords from the stored derivation values.
+This way the password used on each device running the kvsd are different although the same derivation value might be used.
+
+#### Protection in scope:
+
+This mechanism should prevent **offline attacks**.
+
+**Confidentiality:** The confidentiality is ensured because the encryption keys can only be derived on the hardware, otherwise brute-force is required.
+
+**Integrity:** The integrity is ensured by using Authenticated Encryption, while the key required to generate a valid authentication tag can, analogous to the confidentiality, only be derived on the hardware.
+
+#### Out of scope:
+
+It does not protect against an attacker who can successfully boot the operating system or get access to the hardware trust anchor used by *libuta*.
+
+### Protecting data in transit
+
+When the kvsd is deployed in a different location then the client is run, data in transit should be protected.
+Additionally the authenticity of the kvsd has to be ensured. 
+For this purpose the kvsd can be supplied with credentials (private key & certificate) for TLS.
+
+Additionally mutual authentication for TLS can be enabled to ensure only valid clients establish connections to the kvsd.
+
+#### Protection in scope:
+
+**Integrity:** During transit the requested data might not be manipulated.
+E.g a manipulation of the values might lead to misbehaviour of a serivce retrieving its configuration this way.
+
+**Confidentiality:** During transit the data has to be protected again unallowed access.
+Otherwise an attacker might get access to sensitive information, e.g. the configuration of services that might be interesting for reconnaissance.
+
+**Authenticity:** The client requesting data has to be sure that the received data originates from the kvsd and not a man in the middle.
+
+**Authorization:** Only trustworthy clients may request data from the kvsd, therefore they have to provide a valid certificate on their own. Otherwise a malicous client could request arbitrary values from the kvsd, e.g. exploring the configuration of services using kvsd as a storage.
+
+#### Out of scope:
+
+Restricting the access to data stored in kvsd to specific clients.
+Since they have read & write access to all data, all clients have to be trustworthy.
+If TLS is used, they have to provide a valid certificate to ensure this.
 
 ## Backends
 
@@ -151,7 +272,8 @@ The first backend is implemented as a JSON array of key value pairs.
 It is inteded for small databases of keys with small keys because the whole store is parsed and stored in RAM.
 
 The second backend is implemented on file base.
-Each entry is stored as a separate file with the file name representing the key and the content representing the value.
+Each entry is stored as a separate file with the content representing the value.
+The keys are mapped to random file names using an encrypted meta-data file.
 
 ### JSON Backend
 
@@ -170,14 +292,12 @@ Therefore all data is stored in RAM.
 Using this backend the length of the values is restricted to 1024 characters.
 Otherwise the risk of consuming to much RAM during runtime is too high.
 Additionally the number of key value pairs is restricted to 10.000 to prevent too much ressource consumption.
-10.000 key value pairs result in around 11MB of RAM consumption.
+10.000 key value pairs should result in around 11MB of RAM consumption.
 
 #### Security
 
 The JSON Backend is intended for less-secure environments.
 The keys are stored in plain-text form, while only the values are encrypted.
-
-
 
 The kvsd stores the data it receives in a JSON file.
 This JSON file contains key value pairs.
@@ -189,42 +309,49 @@ This JSON file contains key value pairs.
   "test": "testvalue"
 }
 ```
-The encrypted value is generated using the function `Base64(AES256GCM(Key, Initialization Vector, Plaintext))` as follows: 
+The encrypted value is generated using the function `AES-256-GCM-SIV(Key, Initialization Vector, Plaintext)` and Base64 encoded as follows: 
 
-> `Base64(AES256GCM(derive_key(dv), iv, plaintext value))`
-
-```puml
-```
+> `Base64(AES-256-GCM-SIV(derive_key(dv), iv, plaintext value))`
 
 ### File Backend
 
 The file backend stores each key value pair in a file.
-Additionally a JSON file is created containing references to all files and the key related to each of them.
+Additionally a JSON file is created containing references to all files, their derivation values and IVs required for the decryption.
 
-This allows to store dramatically bigger values.
-Only the JSON file is loaded during runtime and the file is loaded, decrypted and returned only on request.
+This allows to store dramatically bigger values since the values of all keys are not stored in RAM during runtime.
+Only the JSON file is loaded during runtime and a file containing a requested value is loaded and decrypted only on request.
 
 #### Security
 
-The key is stored in an encrypted JSON file, containing a reference to an encrypted file (containing the value) and the secrect to decrypt the file.
-The JSON file is decrypted with a secret derived from the 
+The values are stored in files with random file names.
+Their purpose can be retrieved from the JSON file containing the meta data.
+To prevent reading the meta-data while the kvsd is not running, the file is encrypted.
+
+The key is of each file is derived using a random derivation value.
+Additionally a random IV is generated for each file.
+These two measures should prevent IV reuse for the same key.
 
 ```json
 {
-    "files": [
-        {
-            "key": "key",
-            "filename": "file1",
-            "secret": "key"
-        },
-        {
-            "key": "key",
-            "filename": "file2",
-            "secret": "key"
-        }
-    ]
+    "<key 1>": {
+        "filename": "<random filename>",
+        "derivation_value": "<random key derivation value>",
+        "initialization_vector": "<random IV>"
+    },
+    "<key 2>": {
+        "filename": "<random filename>",
+        "derivation_value": "<random key derivation value>",
+        "initialization_vector": "<random IV>"
+    },
+    "<key n>": {
+        "filename": "<random filename>",
+        "derivation_value": "<random key derivation value>",
+        "initialization_vector": "<random IV>"
+    }
 }
 ```
+
+The encrypted content is created in the same way as the value is encrypted in the JSON backend.
 
 ## License
 

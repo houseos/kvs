@@ -1,5 +1,4 @@
-# kvs
-# Key Value Store
+# kvs Makefile
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2020 Benjamin Schilling
 
