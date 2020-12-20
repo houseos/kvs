@@ -21,6 +21,11 @@ path = "src/kvsd/main.rs"
 name = "kvsc"
 path = "src/kvsc/main.rs"
 
+[[test]]
+name = "tests"
+path = "src/tests/mod.rs"
+
+
 [dependencies]
 tonic = { version = "0.3", features = ["tls"] }
 prost = "0.6"
@@ -46,6 +51,9 @@ aes-gcm-siv = "0.9.0"
 
 # En-/Decoding
 base64 = "0.13.0"
+
+[dev-dependencies]
+file_diff = "1.0.0"
 
 [build-dependencies]
 tonic-build = "0.3"
