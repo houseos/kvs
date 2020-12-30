@@ -60,6 +60,25 @@ fn clean_up(backend: u8, path: String) {
 fn run_kvsd(backend: u8, path: String) -> Result<Child, ()> {
     if backend == BACKEND_JSON {
         let kvsd_process = Command::new("target/release/kvsd")
+            .args(&["--backend", "json", "--path", path.as_str()])
+            .spawn()
+            .expect("Failed to start kvsd process.");
+        return Ok(kvsd_process);
+    } else if backend == BACKEND_FILE {
+        let kvsd_process = Command::new("target/release/kvsd")
+            .args(&["--backend", "file", "--path", path.as_str()])
+            .spawn()
+            .expect("Failed to start kvsd process.");
+        return Ok(kvsd_process);
+    } else {
+        eprintln!("Invalid Backend.");
+        Err(())
+    }
+}
+
+fn runs_kvsd_silent(backend: u8, path: String) -> Result<Child, ()> {
+    if backend == BACKEND_JSON {
+        let kvsd_process = Command::new("target/release/kvsd")
             .args(&["--silent", "--backend", "json", "--path", path.as_str()])
             .spawn()
             .expect("Failed to start kvsd process.");
@@ -123,15 +142,13 @@ pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
     // pipe returned value to kvsc
     let mut _result: bool = false;
     let status = Command::new("target/release/kvsc")
-        .args(&["store", "--key", &key, "--pipe"])
+        .args(&["--silent", "store", "--key", &key, "--pipe"])
         .stdin(Stdio::from(tr_out))
         .status()
         .expect("Failed to start kvsc process.");
     if status.success() {
-        println!("Storage successful.");
         return true;
     } else {
-        println!("Storage failed.");
         return false;
     }
 }
@@ -167,7 +184,7 @@ pub fn init_for_json() -> Result<Child, ()> {
     init_dir(TEST_DIR_PATH.to_string());
     // only deletes file, so directory is created first
     clean_up(BACKEND_JSON, TEST_DIR_PATH.to_string());
-    let child = run_kvsd(BACKEND_JSON, TEST_DIR_PATH.to_string());
+    let child = runs_kvsd_silent(BACKEND_JSON, TEST_DIR_PATH.to_string());
     let sleep_time = time::Duration::from_millis(1000);
     thread::sleep(sleep_time);
     return child;

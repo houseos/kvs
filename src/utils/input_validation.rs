@@ -33,8 +33,12 @@ pub fn validate_value(input: String, check_length: bool) -> bool {
         // Allow only characters defined in Base64 alphabet (RFC4648)
         static ref RE_KEY: Regex = Regex::new(r"^[\w+/=]*$").unwrap();
     }
+    // Check not empty
+    if input.is_empty() {
+        return false;
+    }
     // Check length
-    if check_length && input.len() < VALUE_LEN_MIN || input.len() > VALUE_LEN_MAX {
+    if check_length && (input.len() < VALUE_LEN_MIN || input.len() > VALUE_LEN_MAX) {
         return false;
     }
     // Check regex
@@ -162,6 +166,18 @@ mod tests {
         }
     }
     // ============== Value Validation ===============================
+    #[test]
+    fn input_validation_value_length_disabled() {
+        let mut value = String::new();
+        for _x in 0..2000 {
+            value = value + "a";
+        }
+        assert_eq!(validate_value(value, false), true)
+    }
+    #[test]
+    fn input_validation_value_length_disabled_failed() {
+        assert_eq!(validate_value("".to_string(), false), false)
+    }
     #[test]
     fn input_validation_value_lower_length_boundary_ok() {
         assert_eq!(validate_value("t".to_string(), true), true)

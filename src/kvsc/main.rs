@@ -201,7 +201,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 );
                 std::process::exit(0x0001);
             }
-            // for value perform input validation
+            // for value via CLI perform input validation
             if _value_input == INPUT_CLI
                 && !input_validation::validate_value(
                     sub_m.value_of("value").unwrap().to_string(),
