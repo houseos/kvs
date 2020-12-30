@@ -48,8 +48,8 @@ fn clean_up(backend: u8, path: String) {
             return;
         }
         match fs::remove_dir_all(path.clone()) {
-            Ok(_o) => println!("Deleted all file in {} done.", path),
-            Err(_e) => eprintln!("Deleting all file in {} failed.", path),
+            Ok(_o) => println!("Deleting all files in {} done.", path),
+            Err(_e) => eprintln!("Deleting all files in {} failed.", path),
         }
     } else {
         eprintln!("Backend unknown");

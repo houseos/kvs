@@ -176,10 +176,13 @@ mod tests {
       // Start timer
       let instant = Instant::now();
       // retrieve value
-      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 9999));
+      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 10));
       _result = run_kvsc_get(key.clone());
       //calculate and print diff
       println!("{:?}", instant.elapsed());
+      if !_result {
+        println!("Key {} did not exist, failed!", key.clone());
+      }
     }
 
     // Kill kvsd
@@ -214,7 +217,7 @@ mod tests {
       Ok(_o) => println!("Created 1MB file"),
       Err(e) => println!("Failed creating file: {}", e),
     };
-
+    println!("1");
     // Result
     let mut _result: bool = false;
     // Add 10 entries via pipe
@@ -230,18 +233,23 @@ mod tests {
       }
     }
 
+    println!("2");
     // test 10 random entries in the store
     let mut rng = rand::thread_rng();
     for _x in 0..9 {
       // Start timer
       let instant = Instant::now();
       // retrieve value
-      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 9999));
+      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 10));
       _result = run_kvsc_get(key.clone());
       //calculate and print diff
       println!("{:?}", instant.elapsed());
+      if !_result {
+        println!("Key {} did not exist, failed!", key.clone());
+      }
     }
 
+    println!("3");
     // Kill kvsd
     kvsd_process.kill().expect("command wasn't running");
     println!("Test took: {:?}", instant_overall.elapsed());
