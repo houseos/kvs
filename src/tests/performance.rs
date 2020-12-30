@@ -222,11 +222,14 @@ mod tests {
     let mut _result: bool = false;
     // Add 10 entries via pipe
     for x in 0..10 {
+      println!("loop: {}", x);
       // Key Value Pair
       let mut key: String = "testkey".to_string();
       key = key + &format!("{}", x);
       // Store key
+      println!("pre store");
       _result = run_kvsc_store_from_file(key.clone(), "test_temp_dir/input.txt".to_string());
+      println!("post store");
       // Check that all additions were successfull
       if _result == false {
         println!("Failed adding key: {}", key.clone());
