@@ -132,20 +132,22 @@ mod tests {
         println!("Retrieve file and store it in test_temp_dir/retrieved_config.ini.");
         if _result {
             // Get value using kvsd
-            let kvsc_child = Command::new("target/release/kvsc")
+            let mut kvsc_child = Command::new("target/release/kvsc")
                 .args(&["get", "--key", "test_config_file_ini"])
                 .stdout(Stdio::piped())
                 .spawn()
                 .expect("Failed to start kvsc process.");
+            kvsc_child.wait();
             let kvsc_out = kvsc_child.stdout.expect("Failed to open cat stdout");
             // base64 decode and pipe into file
 
-            let base64_child = Command::new("base64")
+            let mut base64_child = Command::new("base64")
                 .arg("-d")
                 .stdin(Stdio::from(kvsc_out))
                 .stdout(Stdio::piped())
                 .spawn()
                 .expect("Failed to run \"base64\" process");
+            base64_child.wait();
             let mut base64_out = base64_child.stdout.expect("Failed to open base64 stdout");
             // compare files
             let mut _f = match File::create("test_temp_dir/retrieved_config.ini") {

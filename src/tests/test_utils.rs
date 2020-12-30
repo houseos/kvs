@@ -116,28 +116,31 @@ pub fn run_kvsc_store(key: String, value: String) -> bool {
 }
 
 pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
-    let cat_child = Command::new("cat")
+    let mut cat_child = Command::new("cat")
         .arg(filepath)
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"cat\" process");
+    cat_child.wait();
     let cat_out = cat_child.stdout.expect("Failed to open cat stdout");
     // pipe output to base64 command
-    let base64_child = Command::new("base64")
+    let mut base64_child = Command::new("base64")
         // .arg("-e")
         .stdin(Stdio::from(cat_out))
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"base64\" process");
+    base64_child.wait();
     let base64_out = base64_child.stdout.expect("Failed to open base64 stdout");
     // remove possible new line characters
-    let tr_child = Command::new("tr")
+    let mut tr_child = Command::new("tr")
         .arg("-d")
         .arg("'\n'")
         .stdin(Stdio::from(base64_out))
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"base64\" process");
+    tr_child.wait();
     let tr_out = tr_child.stdout.expect("Failed to open tr stdout");
     // pipe returned value to kvsc
     let mut _result: bool = false;
@@ -195,7 +198,7 @@ pub fn init_for_file() -> Result<Child, ()> {
     // deletes directory, clean up is called before creating directory
     clean_up(BACKEND_FILE, TEST_DIR_PATH.to_string());
     init_dir(TEST_DIR_PATH.to_string());
-    let child = run_kvsd(BACKEND_FILE, TEST_DIR_PATH.to_string());
+    let child = runs_kvsd_silent(BACKEND_FILE, TEST_DIR_PATH.to_string());
     let sleep_time = time::Duration::from_millis(1000);
     thread::sleep(sleep_time);
     return child;

@@ -50,7 +50,7 @@ mod tests {
     _result = run_kvsc_store("key10001".to_string(), "value".to_string());
     // Kill kvsd
     kvsd_process.kill().expect("command wasn't running");
-    println!("Test took: {:?}", instant_overall);
+    println!("Test took: {:?}", instant_overall.elapsed());
     assert_eq!(_result, false);
   }
   // Test the max size of a JSON store entry
@@ -121,7 +121,7 @@ mod tests {
 
     // Kill kvsd
     kvsd_process.kill().expect("command wasn't running");
-    println!("Test took: {:?}", instant_overall);
+    println!("Test took: {:?}", instant_overall.elapsed());
   }
 
   // ============== Load Tests FILE Backend ==============
@@ -184,7 +184,7 @@ mod tests {
 
     // Kill kvsd
     kvsd_process.kill().expect("command wasn't running");
-    println!("Test took: {:?}", instant_overall);
+    println!("Test took: {:?}", instant_overall.elapsed());
   }
 
   // Test the performance of the file store with 10.000 entries (each 1 megabyte)
@@ -244,7 +244,7 @@ mod tests {
 
     // Kill kvsd
     kvsd_process.kill().expect("command wasn't running");
-    println!("Test took: {:?}", instant_overall);
+    println!("Test took: {:?}", instant_overall.elapsed());
   }
   // Test the performance of the file store with 10.000 entries (each biggest size)
 }
