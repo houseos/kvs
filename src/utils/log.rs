@@ -21,9 +21,7 @@ pub static LOG_SILENT: AtomicBool = AtomicBool::new(false);
 /// destination: LOG_STDOUT or LOG_STDERR
 /// silent: if set no log message is created
 pub fn log(message: String, destination: u8) {
-    if LOG_SILENT.load(Ordering::Relaxed) {
-        return;
-    } else {
+    if !LOG_SILENT.load(Ordering::Relaxed) {
         if destination == LOG_STDOUT {
             println!("{}", message);
         } else if destination == LOG_STDERR {

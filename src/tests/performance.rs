@@ -127,7 +127,8 @@ mod tests {
   // ============== Load Tests FILE Backend ==============
   // Test the size boundary of the file store
 
-  // Test the performance of the file store with 10.000 entries (each 1 kilobyte)
+  // Test the performance of the file store with 10 entries (each 1 kilobyte)
+  // Number of files should not matter since they are not stored in RAM
   #[test]
   fn performance_file_1kb() {
     if cfg!(target_os = "windows") {
@@ -156,9 +157,8 @@ mod tests {
       Err(e) => println!("Failed creating file: {}", e),
     };
 
-    println!("Adding 10.000 entries, this may take a while.");
-    // Add 10.000 entries with file as value via pipe
-    for x in 0..10000 {
+    // Add 10 entries with file as value via pipe
+    for x in 0..10 {
       // Key Value Pair
       let mut key: String = "testkey".to_string();
       key = key + &format!("{}", x);
@@ -187,7 +187,8 @@ mod tests {
     println!("Test took: {:?}", instant_overall.elapsed());
   }
 
-  // Test the performance of the file store with 10.000 entries (each 1 megabyte)
+  // Test the performance of the file store with 10 entries (each 1 megabyte)
+  // Number of files should not matter since they are not stored in RAM
   #[test]
   fn performance_file_1mb() {
     if cfg!(target_os = "windows") {
@@ -216,9 +217,8 @@ mod tests {
 
     // Result
     let mut _result: bool = false;
-    println!("Adding 10.000 entries, this may take a while.");
-    // Add 10.000 entries of length 1024
-    for x in 0..10000 {
+    // Add 10 entries via pipe
+    for x in 0..10 {
       // Key Value Pair
       let mut key: String = "testkey".to_string();
       key = key + &format!("{}", x);

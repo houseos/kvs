@@ -34,7 +34,7 @@ pub fn delete_file(path: String) -> Result<(), io::Error> {
     match std::fs::remove_file(path.clone()) {
         Ok(_o) => Ok(()),
         Err(e) => {
-            log(format!("Failed deleting file: {}", e), LOG_STDERR);
+            log(format!("Failed deleting file at: {}", path), LOG_STDERR);
             Err(e)
         }
     }
