@@ -22,6 +22,7 @@ use utils::crypto::{
     json_decrypt, json_encrypt,
 };
 use utils::filesystem_wrapper::{delete_file, read_file_to_string, write_string_to_file};
+use utils::log::{log, LOG_STDERR, LOG_STDOUT};
 
 // Value File Meta Data
 #[derive(Deserialize, Serialize)]
@@ -48,15 +49,15 @@ lazy_static! {
 pub fn handle_action(action: QueueAction, path: String) {
     match action.action {
         ACTION_STORE => {
-            println!("Storing key \"{}\".", action.kv.key);
+            log(format!("Storing key \"{}\".", action.kv.key), LOG_STDOUT);
             store_action(action, path);
         }
         ACTION_DELETE => {
-            println!("Deleting key \"{}\".", action.kv.key);
+            log(format!("Deleting key \"{}\".", action.kv.key), LOG_STDOUT);
             delete_action(action, path);
         }
         _ => {
-            eprintln!("No matching action available.");
+            log("No matching action available.".to_string(), LOG_STDERR);
         }
     }
 }
@@ -92,10 +93,8 @@ fn store_action(action: QueueAction, path: String) {
             None => "".to_string(),
         };
         if filename.is_empty() {
-            eprintln!(
-                "Could not find key \"{}\" that should already be stored. Ommiting store action.",
-                action.kv.key
-            );
+            log(format!("Could not find key \"{}\" that should already be stored. Ommiting store action.",
+            action.kv.key), LOG_STDERR);
             return;
         }
         // store value in file with filename from hashmap
@@ -122,9 +121,12 @@ fn delete_action(action: QueueAction, path: String) {
     };
     // delete file
     match delete_file(format!("{}/{}", path, filename)) {
-        Ok(_o) => println!("Deleting key \"{}\".", action.kv.key),
+        Ok(_o) => log(format!("Deleting key \"{}\".", action.kv.key), LOG_STDOUT),
         Err(_e) => {
-            eprintln!("Could not delete key \"{}\". Keeping it.", action.kv.key);
+            log(
+                format!("Could not delete key \"{}\". Keeping it.", action.kv.key),
+                LOG_STDERR,
+            );
             return;
         }
     }
@@ -167,9 +169,12 @@ pub fn get_value(key: String, path: String) -> Result<String, String> {
             let base64_ciphertext = match read_file_to_string(format!("{}{}", path, filename)) {
                 Ok(o) => o,
                 Err(_e) => {
-                    eprintln!(
-                        "Could not read file \"{}\" to string to retrieve it's value.",
-                        format!("{}{}", path, filename)
+                    log(
+                        format!(
+                            "Could not read file \"{}\" to string to retrieve it's value.",
+                            format!("{}{}", path, filename)
+                        ),
+                        LOG_STDERR,
                     );
                     return Err("File of key not found.".to_string());
                 }
@@ -212,7 +217,7 @@ fn save_meta_data_to_file(path: String) {
     // serialize HashMap
     let json_string = match serde_json::to_string(&STORE.write().unwrap().elements) {
         Ok(j) => j,
-        Err(_e) => return eprintln!("Error serializing hashmap."),
+        Err(_e) => return log("Error serializing hashmap.".to_string(), LOG_STDERR),
     };
     // encrypt json
     let encrypted_json = json_encrypt(json_string);

@@ -4,8 +4,13 @@
 *  Copyright (C) 2020 Benjamin Schilling
 */
 
+// External crates
 use regex::Regex;
 
+// kvs modules
+use crate::log::{log, LOG_STDERR};
+
+// Constants
 const KEY_LEN_MIN: usize = 1;
 const KEY_LEN_MAX: usize = 32;
 const VALUE_LEN_MIN: usize = 1;
@@ -53,7 +58,7 @@ pub fn validate_ipv4(input: String) -> bool {
     }
     // Shortes "0.0.0.0" = 7, longest "255.255.255.255" = 15
     if input.len() < 7 || input.len() > 15 {
-        println!("IP length invalid");
+        log("IP length invalid".to_string(), LOG_STDERR);
         return false;
     }
     //Check regex
@@ -79,7 +84,7 @@ pub fn validate_port(input: String) -> bool {
     }
     // Shortes "0" = 1, longest "65534" =
     if input.is_empty() || input.len() > 5 {
-        println!("Port length invalid");
+        log("Port length invalid".to_string(), LOG_STDERR);
         return false;
     }
     //Check regex

@@ -123,44 +123,11 @@ mod tests {
             Ok(child) => child,
             Err(()) => return,
         };
-        // run cat command on file
-        let cat_child = Command::new("cat")
-            .arg("src/tests/data/test_config_file.ini")
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to run \"cat\" process");
-        let cat_out = cat_child.stdout.expect("Failed to open cat stdout");
-        // pipe output to base64 command
-        let base64_child = Command::new("base64")
-            // .arg("-e")
-            .stdin(Stdio::from(cat_out))
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to run \"base64\" process");
-        let base64_out = base64_child.stdout.expect("Failed to open base64 stdout");
-        // remove possible new line characters
-        let tr_child = Command::new("tr")
-            .arg("-d")
-            .arg("'\n'")
-            .stdin(Stdio::from(base64_out))
-            .stdout(Stdio::piped())
-            .spawn()
-            .expect("Failed to run \"base64\" process");
-        let tr_out = tr_child.stdout.expect("Failed to open tr stdout");
-        // pipe returned value to kvsc
         let mut _result: bool = false;
-        let status = Command::new("target/release/kvsc")
-            .args(&["store", "--key", "test_config_file_ini", "--pipe"])
-            .stdin(Stdio::from(tr_out))
-            .status()
-            .expect("Failed to start kvsc process.");
-        if status.success() {
-            println!("Storage successful.");
-            _result = true;
-        } else {
-            println!("Storage failed.");
-            _result = false;
-        }
+        _result = run_kvsc_store_from_file(
+            "test_config_file_ini".to_string(),
+            "src/tests/data/test_config_file.ini".to_string(),
+        );
         // If storing it was successful, retrieve the value and write it to file
         println!("Retrieve file and store it in test_temp_dir/retrieved_config.ini.");
         if _result {
@@ -218,6 +185,4 @@ mod tests {
         kvsd_process.kill().expect("command wasn't running");
         assert_eq!(diff_files(&mut original, &mut retrieved), true);
     }
-
-    // Test the storage and retrieval of a file (base64 encoded) passed as the value command line argument
 }

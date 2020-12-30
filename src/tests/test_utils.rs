@@ -5,7 +5,7 @@
 */
 
 // Rust Standard Library
-use std::process::{Child, Command};
+use std::process::{Child, Command, Stdio};
 use std::{thread, time};
 
 // File System
@@ -60,13 +60,13 @@ fn clean_up(backend: u8, path: String) {
 fn run_kvsd(backend: u8, path: String) -> Result<Child, ()> {
     if backend == BACKEND_JSON {
         let kvsd_process = Command::new("target/release/kvsd")
-            .args(&["--backend", "json", "--path", path.as_str()])
+            .args(&["--silent", "--backend", "json", "--path", path.as_str()])
             .spawn()
             .expect("Failed to start kvsd process.");
         return Ok(kvsd_process);
     } else if backend == BACKEND_FILE {
         let kvsd_process = Command::new("target/release/kvsd")
-            .args(&["--backend", "file", "--path", path.as_str()])
+            .args(&["--silent", "--backend", "file", "--path", path.as_str()])
             .spawn()
             .expect("Failed to start kvsd process.");
         return Ok(kvsd_process);
@@ -79,7 +79,14 @@ fn run_kvsd(backend: u8, path: String) -> Result<Child, ()> {
 // Run kvsc with the store subcommand
 pub fn run_kvsc_store(key: String, value: String) -> bool {
     let status = Command::new("target/release/kvsc")
-        .args(&["store", "--key", key.as_str(), "--value", value.as_str()])
+        .args(&[
+            "--silent",
+            "store",
+            "--key",
+            key.as_str(),
+            "--value",
+            value.as_str(),
+        ])
         .status()
         .expect("Failed to start kvsc process.");
     if status.success() {
@@ -89,10 +96,50 @@ pub fn run_kvsc_store(key: String, value: String) -> bool {
     }
 }
 
+pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
+    let cat_child = Command::new("cat")
+        .arg(filepath)
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to run \"cat\" process");
+    let cat_out = cat_child.stdout.expect("Failed to open cat stdout");
+    // pipe output to base64 command
+    let base64_child = Command::new("base64")
+        // .arg("-e")
+        .stdin(Stdio::from(cat_out))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to run \"base64\" process");
+    let base64_out = base64_child.stdout.expect("Failed to open base64 stdout");
+    // remove possible new line characters
+    let tr_child = Command::new("tr")
+        .arg("-d")
+        .arg("'\n'")
+        .stdin(Stdio::from(base64_out))
+        .stdout(Stdio::piped())
+        .spawn()
+        .expect("Failed to run \"base64\" process");
+    let tr_out = tr_child.stdout.expect("Failed to open tr stdout");
+    // pipe returned value to kvsc
+    let mut _result: bool = false;
+    let status = Command::new("target/release/kvsc")
+        .args(&["store", "--key", &key, "--pipe"])
+        .stdin(Stdio::from(tr_out))
+        .status()
+        .expect("Failed to start kvsc process.");
+    if status.success() {
+        println!("Storage successful.");
+        return true;
+    } else {
+        println!("Storage failed.");
+        return false;
+    }
+}
+
 // Run kvsc with the get subcommand
 pub fn run_kvsc_get(key: String) -> bool {
     let status = Command::new("target/release/kvsc")
-        .args(&["get", "--key", key.as_str()])
+        .args(&["--silent", "get", "--key", key.as_str()])
         .status()
         .expect("Failed to start kvsc process.");
     if status.success() {
@@ -105,7 +152,7 @@ pub fn run_kvsc_get(key: String) -> bool {
 // Run kvsc with the delete subcommand
 pub fn run_kvsc_delete(key: String) -> bool {
     let status = Command::new("target/release/kvsc")
-        .args(&["delete", "--key", key.as_str()])
+        .args(&["--silent", "delete", "--key", key.as_str()])
         .status()
         .expect("Failed to start kvsc process.");
     if status.success() {

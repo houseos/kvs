@@ -20,6 +20,7 @@ use store::json_store;
 use store::store_actions::QueueAction;
 use utils::filesystem_wrapper;
 use utils::input_validation;
+use utils::log::{log, set_log_silent, LOG_STDERR, LOG_STDOUT};
 
 // CLI interface
 extern crate clap;
@@ -33,13 +34,6 @@ const BACKEND_JSON: u8 = 0;
 const BACKEND_FILE: u8 = 1;
 
 fn main() {
-    // Properly handle CTRL-C signals
-    ctrlc::set_handler(move || {
-        println!("Received Ctrl+C, shutting down.");
-        std::process::exit(0x0000);
-    })
-    .expect("Error setting Ctrl+C handler");
-
     // Specify commandline arguments
     let matches = App::new("kvsd")
         .version(clap::crate_version!())
@@ -78,7 +72,24 @@ fn main() {
                 .help("Set to enable TLS support for gRPC.\nIf set certificate and private key are expected as grpc.crt\nand grpc.key in the execution directory of kvsd binary.")
                 .long("tls"),
         )
+        .arg(
+            Arg::with_name("silent")
+            .help("Supress all stdout and stderr messages.")
+            .long("silent")
+        )
         .get_matches();
+
+    // For for silent option
+    // For for silent option
+    if matches.is_present("silent") {
+        set_log_silent(true);
+    }
+    // Properly handle CTRL-C signals
+    ctrlc::set_handler(move || {
+        log("Received Ctrl+C, shutting down.".to_string(), LOG_STDOUT);
+        std::process::exit(0x0000);
+    })
+    .expect("Error setting Ctrl+C handler");
     // Set IP and Port to default values
     let mut ip: String = "127.0.0.1".to_string();
     // Set IP to provided value if existing
@@ -86,9 +97,12 @@ fn main() {
         if input_validation::validate_ipv4(matches.value_of("ip").unwrap().to_string()) {
             ip = matches.value_of("ip").unwrap().to_string();
         } else {
-            eprintln!(
-                "IP parameter \"{}\" invalid, only IPv4 allowed.",
-                matches.value_of("ip").unwrap().to_string()
+            log(
+                format!(
+                    "IP parameter \"{}\" invalid, only IPv4 allowed.",
+                    matches.value_of("ip").unwrap().to_string()
+                ),
+                LOG_STDERR,
             );
             std::process::exit(0x0001);
         }
@@ -99,9 +113,12 @@ fn main() {
         if input_validation::validate_port(matches.value_of("port").unwrap().to_string()) {
             port = matches.value_of("port").unwrap().to_string();
         } else {
-            eprintln!(
-                "Port parameter \"{}\" invalid, only valid TCP port numbers allowed.",
-                matches.value_of("port").unwrap().to_string()
+            log(
+                format!(
+                    "Port parameter \"{}\" invalid, only valid TCP port numbers allowed.",
+                    matches.value_of("port").unwrap().to_string()
+                ),
+                LOG_STDERR,
             );
             std::process::exit(0x0001);
         }
@@ -112,9 +129,12 @@ fn main() {
         if input_validation::validate_path(matches.value_of("path").unwrap().to_string()) {
             path = matches.value_of("path").unwrap().to_string();
         } else {
-            eprintln!(
-                "Path parameter \"{}\" invalid, only valid filesystem paths using alphanumeric characters, \"\\\", \"/\", \".\", \":\", \"-\", \"_\" are allowed.",
+            log(
+                format!(
+                    "Path parameter \"{}\" invalid, only valid filesystem paths using alphanumeric characters, \"\\\", \"/\", \".\", \":\", \"-\", \"_\" are allowed.",
                 matches.value_of("Path").unwrap().to_string()
+                ),
+                LOG_STDERR,
             );
             std::process::exit(0x0001);
         }
@@ -132,13 +152,13 @@ fn main() {
     // Read persistent store from file
     if backend == BACKEND_JSON {
         match json_store::initialize_store_from_file(path.clone()) {
-            Ok(ok) => println!("Finished loading file: {}", ok),
-            Err(e) => eprintln!("Error loading file: {}", e),
+            Ok(ok) => log(format!("Finished loading file: {}", ok), LOG_STDOUT),
+            Err(e) => log(format!("Error loading file: {}", e), LOG_STDERR),
         }
     } else if backend == BACKEND_FILE {
         match file_store::load_meta_data_from_file(path.clone()) {
-            Ok(ok) => println!("Finished loading file: {}", ok),
-            Err(e) => eprintln!("Error loading file: {}", e),
+            Ok(ok) => log(format!("Finished loading file: {}", ok), LOG_STDOUT),
+            Err(e) => log(format!("Error loading file: {}", e), LOG_STDERR),
         }
     }
 
@@ -156,10 +176,11 @@ fn main() {
             grpc_path,
         ) {
             Ok(o) => {
-                println!("{:?}", o);
+                log(format!("{:?}", o), LOG_STDOUT);
+                println!();
             }
             Err(e) => {
-                eprintln!("{}", e);
+                log(format!("{}", e), LOG_STDERR);
                 std::process::exit(0x0001);
             }
         }

@@ -28,7 +28,12 @@ pub mod kvs_api {
 use crate::store::file_store;
 use crate::store::json_store;
 use crate::store::store_actions::{QueueAction, ACTION_DELETE, ACTION_STORE};
-use utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
+use utils::{
+    crypto,
+    filesystem_wrapper::get_exec_dir,
+    input_validation,
+    log::{log, LOG_STDOUT},
+};
 
 // Supported backends
 const BACKEND_JSON: u8 = 0;
@@ -159,9 +164,12 @@ pub fn start_grpc_server(
     // If TLS is enabled start gRPC server with credentials
     if enable_tls {
         let path = get_exec_dir();
-        println!(
-            "TLS Option for gRPC given, looking for certificate and private key in {}",
-            path
+        log(
+            format!(
+                "TLS Option for gRPC given, looking for certificate and private key in {}",
+                path
+            ),
+            LOG_STDOUT,
         );
         let credentials = match crypto::Credentials::new(path) {
             Ok(creds) => creds,
@@ -189,7 +197,7 @@ pub fn start_grpc_server(
             backend,
             storage_path,
         };
-        println!("gRPC listening on {}", socket);
+        log(format!("gRPC listening on {}", socket), LOG_STDOUT);
         let mut rt = Runtime::new().expect("failed to obtain a new RunTime object");
         let server_future = Server::builder()
             .add_service(KvsServer::new(kvs))

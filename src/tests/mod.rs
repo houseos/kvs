@@ -5,4 +5,5 @@
 */
 
 mod integration;
+mod performance;
 pub mod test_utils;

@@ -10,3 +10,4 @@ extern crate lazy_static;
 pub mod crypto;
 pub mod filesystem_wrapper;
 pub mod input_validation;
+pub mod log;

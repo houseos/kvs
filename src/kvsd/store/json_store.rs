@@ -21,6 +21,7 @@ use utils::crypto::{json_decrypt, json_encrypt};
 use utils::filesystem_wrapper::{
     read_persistent_store_file_to_string, write_persistent_store_file_from_string,
 };
+use utils::log::{log, LOG_STDERR, LOG_STDOUT};
 
 // Constants
 const MAP_SIZE_MAX: usize = 10000;
@@ -50,17 +51,17 @@ pub fn is_store_full() -> bool {
 pub fn handle_action(action: QueueAction, path: String) {
     match action.action {
         ACTION_STORE => {
-            println!("Storing key \"{}\".", action.kv.key);
+            log(format!("Storing key \"{}\".", action.kv.key), LOG_STDOUT);
             // Forward to specific handle function.
             store_action(action, path);
         }
         ACTION_DELETE => {
-            println!("Deleting key \"{}\".", action.kv.key);
+            log(format!("Deleting key \"{}\".", action.kv.key), LOG_STDOUT);
             // Forward to specific handle function.
             delete_action(action, path);
         }
         _ => {
-            eprintln!("No matching action available.");
+            log("No matching action available.".to_string(), LOG_STDERR);
         }
     }
 }
@@ -74,7 +75,7 @@ fn store_action(action: QueueAction, path: String) {
         .insert(action.kv.key, json_encrypt(action.kv.value));
     let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
         Ok(j) => j,
-        Err(_e) => return eprintln!("Error serializing hashmap."),
+        Err(_e) => return log("Error serializing hashmap.".to_string(), LOG_STDERR),
     };
     write_persistent_store_file_from_string(path, j);
 }
@@ -88,7 +89,7 @@ fn delete_action(action: QueueAction, path: String) {
         .remove(action.kv.key.as_str());
     let j = match serde_json::to_string(&STORE.write().unwrap().elements) {
         Ok(j) => j,
-        Err(_e) => return eprintln!("Error serializing hashmap."),
+        Err(_e) => return log("Error serializing hashmap.".to_string(), LOG_STDERR),
     };
     write_persistent_store_file_from_string(path, j);
 }

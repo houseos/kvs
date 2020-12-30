@@ -20,7 +20,12 @@ pub mod kvs_api {
 }
 
 //kvs crates
-use utils::{crypto, filesystem_wrapper::get_exec_dir, input_validation};
+use utils::{
+    crypto,
+    filesystem_wrapper::get_exec_dir,
+    input_validation,
+    log::{log, set_log_silent, LOG_STDERR, LOG_STDOUT},
+};
 
 // CLI interface
 extern crate clap;
@@ -54,6 +59,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             Arg::with_name("tls")
                 .help("Set to enable TLS support for gRPC.\nIf set certificate and private key are expected as ca.crt in the execution directory of kvsc binary.")
                 .long("tls"),
+        )
+        .arg(
+            Arg::with_name("silent")
+            .help("Supress all stdout and stderr messages.")
+            .long("silent")
         )
         .subcommand(
             SubCommand::with_name("store")
@@ -100,6 +110,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             )
         )
         .get_matches();
+
+    // For for silent option
+    if matches.is_present("silent") {
+        set_log_silent(true);
+    }
+
     // Set IP and Port to default values
     let mut ip: String = "127.0.0.1".to_string();
     let mut port: String = "27001".to_string();
@@ -108,9 +124,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if input_validation::validate_ipv4(matches.value_of("ip").unwrap().to_string()) {
             ip = matches.value_of("ip").unwrap().to_string();
         } else {
-            eprintln!(
-                "IP parameter {} invalid, only IPv4 allowed.",
-                matches.value_of("ip").unwrap().to_string()
+            log(
+                format!(
+                    "IP parameter {} invalid, only IPv4 allowed.",
+                    matches.value_of("ip").unwrap().to_string()
+                ),
+                LOG_STDERR,
             );
             std::process::exit(0x0001);
         }
@@ -120,9 +139,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         if input_validation::validate_port(matches.value_of("port").unwrap().to_string()) {
             port = matches.value_of("port").unwrap().to_string();
         } else {
-            eprintln!(
-                "Port parameter {} invalid, only valid TCP port numbers allowed.",
-                matches.value_of("port").unwrap().to_string()
+            log(
+                format!(
+                    "Port parameter {} invalid, only valid TCP port numbers allowed.",
+                    matches.value_of("port").unwrap().to_string()
+                ),
+                LOG_STDERR,
             );
             std::process::exit(0x0001);
         }
@@ -133,11 +155,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let channel;
     if matches.is_present("tls") {
         let path = get_exec_dir();
-        println!("TLS Option for gRPC given, looking for ca.crt in {}", path);
+        log(
+            format!("TLS Option for gRPC given, looking for ca.crt in {}", path),
+            LOG_STDOUT,
+        );
         let trust_store = match crypto::TrustStore::new(path) {
             Ok(trusted) => trusted,
             Err(e) => {
-                eprintln!("Error during store: {:?}", e);
+                log(format!("Error during store: {:?}", e), LOG_STDERR);
                 std::process::exit(0x0001);
             }
         };
@@ -159,7 +184,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("store", Some(sub_m)) => {
             // Perform input validation on options
             if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string()) {
-                eprintln!("Provided key invalid.");
+                log("Provided key invalid.".to_string(), LOG_STDERR);
                 std::process::exit(0x0001);
             }
             // Check whether either value or pipe are given
@@ -170,7 +195,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 _value_input = INPUT_PIPE;
             } else {
                 // If both value and pipe are given exit.
-                eprintln!("Provide either \"value\" or \"pipe\".");
+                log(
+                    "Provide either \"value\" or \"pipe\".".to_string(),
+                    LOG_STDERR,
+                );
                 std::process::exit(0x0001);
             }
             // for value perform input validation
@@ -180,7 +208,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                     false,
                 )
             {
-                eprintln!("Provided value invalid.");
+                log("Provided value invalid.".to_string(), LOG_STDERR);
                 std::process::exit(0x0001);
             }
 
@@ -193,7 +221,10 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
                 match io::stdin().read_to_string(&mut value) {
                     Ok(string) => string,
                     Err(e) => {
-                        eprintln!("Could not read value from stdin: {}.", e);
+                        log(
+                            format!("Could not read value from stdin: {}.", e),
+                            LOG_STDERR,
+                        );
                         std::process::exit(0x0001);
                     }
                 };
@@ -203,11 +234,14 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Send request and handle response
             match client.store(request).await {
                 Ok(response) => {
-                    println!("Storing key \"{}\" successful.", response.into_inner().key);
+                    log(
+                        format!("Storing key \"{}\" successful.", response.into_inner().key),
+                        LOG_STDOUT,
+                    );
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during store: {:?}", e.message());
+                    log(format!("Error during store: {:?}", e.message()), LOG_STDERR);
                     std::process::exit(0x0001);
                 }
             };
@@ -215,7 +249,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("get", Some(sub_m)) => {
             // Perform input validation on options
             if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string()) {
-                eprintln!("Provided key invalid.");
+                log("Provided key invalid.".to_string(), LOG_STDERR);
                 std::process::exit(0x0001);
             }
             // Get values of options
@@ -228,11 +262,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Send request and handle response
             match client.get(request).await {
                 Ok(response) => {
+                    // Dont log but directly write to stdout to return value
                     println!("{}", response.into_inner().value);
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during get: {:?}", e.message());
+                    log(format!("Error during get: {:?}", e.message()), LOG_STDERR);
                     std::process::exit(0x0001);
                 }
             };
@@ -240,7 +275,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         ("delete", Some(sub_m)) => {
             // Perform input validation on options
             if !input_validation::validate_key(sub_m.value_of("key").unwrap().to_string()) {
-                eprintln!("Provided key or value invalid.");
+                log("Provided key invalid.".to_string(), LOG_STDERR);
                 std::process::exit(0x0001);
             }
             // Get values of options
@@ -254,17 +289,23 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
             // Send request and handle response
             match client.delete(request).await {
                 Ok(response) => {
-                    println!("Deleting key \"{}\" successful.", response.into_inner().key);
+                    log(
+                        format!("Deleting key \"{}\" successful.", response.into_inner().key),
+                        LOG_STDOUT,
+                    );
                     std::process::exit(0x0000);
                 }
                 Err(e) => {
-                    eprintln!("Error during delete: {:?}", e.message());
+                    log(
+                        format!("Error during delete: {:?}", e.message()),
+                        LOG_STDERR,
+                    );
                     std::process::exit(0x0001);
                 }
             };
         }
         _ => {
-            eprintln!("Unknown subcommand.");
+            log("Unknown subcommand.".to_string(), LOG_STDERR);
             std::process::exit(0x0001);
         }
     };

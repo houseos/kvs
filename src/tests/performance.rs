@@ -12,46 +12,239 @@
 #[cfg(test)]
 mod tests {
 
-    // ============== Load Tests ==============
+  use rand::Rng;
+  use std::fs::File;
+  use std::io::prelude::*;
+  use std::time::Instant;
 
-    // Test the maximum amount of entries in a JSON store
+  use crate::test_utils::*;
+  // ============== Load Tests JSON Backend ==============
 
-    // Test the maximal size of a JSON store entry
+  // Test the maximum amount of entries in a JSON store
+  #[test]
+  fn performance_json_max_entries() {
+    let instant_overall = Instant::now();
+    let mut kvsd_process = match init_for_json() {
+      Ok(child) => child,
+      Err(()) => return,
+    };
+    // Result
+    let mut _result: bool = false;
 
-    // Test the performance of a JSON store with maximal size
+    println!("Adding 10.000 entries, this may take a while.");
+    // Add 10.000 entries
+    for x in 0..10000 {
+      // Key Value Pair
+      let mut key: String = "testkey".to_string();
+      let value: String = "testvalue".to_string();
+      key = key + &format!("{}", x);
+      // Store key
+      _result = run_kvsc_store(key.clone(), value);
+      // Check that all additions were successfull
+      if _result == false {
+        println!("Failed adding key: {}", key.clone());
+      }
+    }
 
-    // Test the file store with 10.000 entries
+    // Check that 10.001th entry fails
+    _result = run_kvsc_store("key10001".to_string(), "value".to_string());
+    // Kill kvsd
+    kvsd_process.kill().expect("command wasn't running");
+    println!("Test took: {:?}", instant_overall);
+    assert_eq!(_result, false);
+  }
+  // Test the max size of a JSON store entry
+  #[test]
+  fn performance_json_max_value_length() {
+    let mut kvsd_process = match init_for_json() {
+      Ok(child) => child,
+      Err(()) => return,
+    };
+    // Result
+    let mut _result: bool = false;
 
-    // Test the size boundary of the file store
+    // Key
+    let key: String = "testkey".to_string();
+    // Add 1024 characters to value
+    let mut value: String = String::new();
+    for _x in 0..1024 {
+      value = value + "a";
+    }
+    value = value + "b";
+    // Store key value pair, it should fail
+    _result = run_kvsc_store(key.clone(), value.clone());
 
-    // Test the performance of the file store with 10.000 entries (each 1 kilobyte)
-    /*
-    #!/bin/bash
+    // Kill kvsd
+    kvsd_process.kill().expect("command wasn't running");
+    assert_eq!(_result, false);
+  }
+  // Test the performance of a JSON store with maximal size
+  #[test]
+  fn performance_json() {
+    let instant_overall = Instant::now();
+    let mut kvsd_process = match init_for_json() {
+      Ok(child) => child,
+      Err(()) => return,
+    };
+    // Result
+    let mut _result: bool = false;
 
-    # clean up store
-    rm -r ../target/release/store.json
+    println!("Adding 10.000 entries, this may take a while.");
+    // Add 10.000 entries of length 1024
+    for x in 0..10000 {
+      // Key Value Pair
+      let mut key: String = "testkey".to_string();
+      let mut value: String = String::new();
+      for _y in 0..1024 {
+        value = value + "a";
+      }
+      key = key + &format!("{}", x);
+      // Store key
+      _result = run_kvsc_store(key.clone(), value);
+      // Check that all additions were successfull
+      if _result == false {
+        println!("Failed adding key: {}", key.clone());
+      }
+    }
 
-    # Initialize kvsd using kvsc with 10.000 entries.
-    echo "Initialize kvsd with 1000 entries"
-    for ((i=0;i<10000;i++))
-    do
-      ../target/release/kvsc store --key "key$i" --value "$VALUE$i" > /dev/null 2>&1
-    done
+    // test 10 random entries in the store
+    let mut rng = rand::thread_rng();
+    for _x in 0..9 {
+      // Start timer
+      let instant = Instant::now();
+      // retrieve value
+      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 9999));
+      _result = run_kvsc_get(key.clone());
+      //calculate and print diff
+      println!("{:?}", instant.elapsed());
+    }
 
-    # request random values and measure time
-    echo "Request random values"
-    for ((i=9900;i<9910;i++))
-    do
-      START_TIME=$(date +%s.%N)
-      ../target/release/kvsc get --key "key$i"
-      END_TIME=$(date +%s.%N)
-      TIME_DIFF=$(echo "$END_TIME - $START_TIME" | bc)
-      echo "---- Get key$i ----"
-      echo "$TIME_DIFF"
-    done
-        */
+    // Kill kvsd
+    kvsd_process.kill().expect("command wasn't running");
+    println!("Test took: {:?}", instant_overall);
+  }
 
-    // Test the performance of the file store with 10.000 entries (each 1 megabyte)
+  // ============== Load Tests FILE Backend ==============
+  // Test the size boundary of the file store
 
-    // Test the performance of the file store with 10.000 entries (each biggest size)
+  // Test the performance of the file store with 10.000 entries (each 1 kilobyte)
+  #[test]
+  fn performance_file_1kb() {
+    if cfg!(target_os = "windows") {
+      println!("This test can be executed under linux only, it uses bash commands.");
+      return;
+    }
+    let instant_overall = Instant::now();
+    let mut kvsd_process = match init_for_file() {
+      Ok(child) => child,
+      Err(()) => return,
+    };
+    // Result
+    let mut _result: bool = false;
+
+    // create file with 1kB size
+    let mut value: String = String::new();
+    for _y in 0..1024 {
+      value = value + "a";
+    }
+    let mut file = match File::create("test_temp_dir/input.txt") {
+      Ok(o) => o,
+      Err(_e) => return,
+    };
+    match file.write_all(value.as_bytes()) {
+      Ok(_o) => println!("Created 1kB file"),
+      Err(e) => println!("Failed creating file: {}", e),
+    };
+
+    println!("Adding 10.000 entries, this may take a while.");
+    // Add 10.000 entries with file as value via pipe
+    for x in 0..10000 {
+      // Key Value Pair
+      let mut key: String = "testkey".to_string();
+      key = key + &format!("{}", x);
+      // Store key
+      _result = run_kvsc_store_from_file(key.clone(), "test_temp_dir/input.txt".to_string());
+      // Check that all additions were successfull
+      if _result == false {
+        println!("Failed adding key: {}", key.clone());
+      }
+    }
+
+    // test 10 random entries in the store
+    let mut rng = rand::thread_rng();
+    for _x in 0..9 {
+      // Start timer
+      let instant = Instant::now();
+      // retrieve value
+      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 9999));
+      _result = run_kvsc_get(key.clone());
+      //calculate and print diff
+      println!("{:?}", instant.elapsed());
+    }
+
+    // Kill kvsd
+    kvsd_process.kill().expect("command wasn't running");
+    println!("Test took: {:?}", instant_overall);
+  }
+
+  // Test the performance of the file store with 10.000 entries (each 1 megabyte)
+  #[test]
+  fn performance_file_1mb() {
+    if cfg!(target_os = "windows") {
+      println!("This test can be executed under linux only, it uses bash commands.");
+      return;
+    }
+    let instant_overall = Instant::now();
+    let mut kvsd_process = match init_for_file() {
+      Ok(child) => child,
+      Err(()) => return,
+    };
+
+    // create file with 1MB size
+    let mut value: String = String::new();
+    for _y in 0..1048576 {
+      value = value + "a";
+    }
+    let mut file = match File::create("test_temp_dir/input.txt") {
+      Ok(o) => o,
+      Err(_e) => return,
+    };
+    match file.write_all(value.as_bytes()) {
+      Ok(_o) => println!("Created 1MB file"),
+      Err(e) => println!("Failed creating file: {}", e),
+    };
+
+    // Result
+    let mut _result: bool = false;
+    println!("Adding 10.000 entries, this may take a while.");
+    // Add 10.000 entries of length 1024
+    for x in 0..10000 {
+      // Key Value Pair
+      let mut key: String = "testkey".to_string();
+      key = key + &format!("{}", x);
+      // Store key
+      _result = run_kvsc_store_from_file(key.clone(), "test_temp_dir/input.txt".to_string());
+      // Check that all additions were successfull
+      if _result == false {
+        println!("Failed adding key: {}", key.clone());
+      }
+    }
+
+    // test 10 random entries in the store
+    let mut rng = rand::thread_rng();
+    for _x in 0..9 {
+      // Start timer
+      let instant = Instant::now();
+      // retrieve value
+      let key: String = "testkey".to_string() + &format!("{}", rng.gen_range(0, 9999));
+      _result = run_kvsc_get(key.clone());
+      //calculate and print diff
+      println!("{:?}", instant.elapsed());
+    }
+
+    // Kill kvsd
+    kvsd_process.kill().expect("command wasn't running");
+    println!("Test took: {:?}", instant_overall);
+  }
+  // Test the performance of the file store with 10.000 entries (each biggest size)
 }
