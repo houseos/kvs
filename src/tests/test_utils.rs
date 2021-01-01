@@ -120,8 +120,8 @@ pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
 
     let mut cat_child = Command::new("cat");
     if let Ok(mut child) = cat_child.arg(filepath).stdout(Stdio::piped()).spawn() {
-        child.wait().expect("command wasn't running");
         let cat_out = child.stdout.take().expect("Failed to open cat stdout");
+        child.wait().expect("command wasn't running");
         // pipe output to base64 command
         println!("base64");
         let mut base64_child = Command::new("base64")
