@@ -122,13 +122,11 @@ pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"cat\" process");
-    println!("cat before wait");
+    let cat_out = cat_child.stdout.take().expect("Failed to open cat stdout");
     match cat_child.wait() {
         Ok(_o) => println!("cat successful"),
         Err(e) => println!("cat failed: {}", e),
     };
-    println!("cat after wait");
-    let cat_out = cat_child.stdout.expect("Failed to open cat stdout");
     // pipe output to base64 command
     println!("base64");
     let mut base64_child = Command::new("base64")
@@ -137,11 +135,14 @@ pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"base64\" process");
+    let base64_out = base64_child
+        .stdout
+        .take()
+        .expect("Failed to open base64 stdout");
     match base64_child.wait() {
         Ok(_o) => println!("base64 successful"),
         Err(e) => println!("base64 failed: {}", e),
     };
-    let base64_out = base64_child.stdout.expect("Failed to open base64 stdout");
     // remove possible new line characters
     println!("tr");
     let mut tr_child = Command::new("tr")
@@ -151,11 +152,11 @@ pub fn run_kvsc_store_from_file(key: String, filepath: String) -> bool {
         .stdout(Stdio::piped())
         .spawn()
         .expect("Failed to run \"base64\" process");
+    let tr_out = tr_child.stdout.take().expect("Failed to open tr stdout");
     match tr_child.wait() {
         Ok(_o) => println!("tr successful"),
         Err(e) => println!("tr failed: {}", e),
     };
-    let tr_out = tr_child.stdout.expect("Failed to open tr stdout");
     // pipe returned value to kvsc
     let mut _result: bool = false;
     println!("kvsc");
