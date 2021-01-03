@@ -94,7 +94,7 @@ jobs:
     - name: Download all workflow run artifacts
       uses: actions/download-artifact@v2
     - name: Upload Release Asset Windows - kvsd
-      id: upload-release-asset-windows 
+      id: upload-release-asset-windows-kvsd 
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -104,7 +104,7 @@ jobs:
         asset_name: kvsd.exe
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Windows - kvsc
-      id: upload-release-asset-windows 
+      id: upload-release-asset-windows-kvsc 
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -114,7 +114,7 @@ jobs:
         asset_name: kvsc.exe
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - kvsd
-      id: upload-release-asset-linux
+      id: upload-release-asset-linux-kvsd
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -124,7 +124,7 @@ jobs:
         asset_name: kvsd_linux_amd64
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - kvsc
-      id: upload-release-asset-linux
+      id: upload-release-asset-linux-kvsc
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
