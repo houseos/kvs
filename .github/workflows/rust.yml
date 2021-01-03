@@ -133,3 +133,13 @@ jobs:
         asset_path: ./kvsc_linux_amd64/kvsc_linux_amd64
         asset_name: kvsc_linux_amd64
         asset_content_type: application/octet-stream
+    - name: Upload Release Asset Linux - debian
+      id: upload-release-asset-linux-debian
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
+        asset_path: ./kvs_0.1.0-0_amd64.deb/kvs_0.1.0-0_amd64.deb
+        asset_name: kvs_0.1.0-0_amd64.deb
+        asset_content_type: application/octet-stream
