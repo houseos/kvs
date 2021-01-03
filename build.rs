@@ -14,7 +14,7 @@ fn main() -> Result<(), String> {
     }
     // Generate code from proto file
     match tonic_build::compile_protos(proto_file) {
-        Ok(_o) => return Ok(()),
-        Err(e) => return Err(format!("Failed: {:?}", e)),
+        Ok(_o) => Ok(()),
+        Err(e) => Err(format!("Failed: {:?}", e)),
     };
 }
