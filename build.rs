@@ -4,7 +4,17 @@
 *  Copyright (C) 2020 Benjamin Schilling
 */
 
-fn main() -> Result<(), Box<dyn std::error::Error>> {
-    tonic_build::compile_protos("proto/kvs.proto")?;
-    Ok(())
+use std::path::Path;
+
+fn main() -> Result<(), String> {
+    let proto_file = "proto/kvs.proto";
+    // Check that proto file exists
+    if !Path::new(proto_file).exists() {
+        return Err("Proto file does not exist.".to_string());
+    }
+    // Generate code from proto file
+    match tonic_build::compile_protos(proto_file) {
+        Ok(_o) => return Ok(()),
+        Err(e) => return Err(format!("Failed: {:?}", e)),
+    };
 }
