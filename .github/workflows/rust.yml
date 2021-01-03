@@ -27,8 +27,8 @@ jobs:
         args: --all-features
     - name: Build
       run: cargo build --release
-    - name: Run tests
-      run: cargo test  --release -- --test-threads=1
+    #- name: Run tests
+    #  run: cargo test  --release -- --test-threads=1
     - uses: actions/upload-artifact@v1
       with:
         name: kvsd-linux-amd64
