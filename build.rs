@@ -16,5 +16,5 @@ fn main() -> Result<(), String> {
     match tonic_build::compile_protos(proto_file) {
         Ok(_o) => Ok(()),
         Err(e) => Err(format!("Failed: {:?}", e)),
-    };
+    }
 }
