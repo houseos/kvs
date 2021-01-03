@@ -2,7 +2,7 @@
 # SPDX-License-Identifier: MIT
 # Copyright (C) 2020 Benjamin Schilling
 
-.PHONY: all build install clean uninstall
+.PHONY: all build clean
 
 all: clean build
 
