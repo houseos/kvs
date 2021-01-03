@@ -1,0 +1,28 @@
+// Protocol Buffers Specification for kvs
+// For details on the structure see
+// https://developers.google.com/protocol-buffers/docs/proto3
+// SPDX-License-Identifier: MIT
+// Copyright (C) 2020 Benjamin Schilling
+
+
+// version of protocol buffer used
+syntax = "proto3";
+
+package kvs_api;
+
+service Kvs {
+    rpc store (KeyValuePair) returns (KeyValuePair);
+    rpc get (KeyValuePair) returns (KeyValuePair);
+    rpc delete (KeyValuePair) returns (KeyValuePair);
+}  
+
+// KeyValuePair message
+message KeyValuePair {
+// data type and position of data
+
+    // The key of the key value pair
+    string key = 1;
+
+    // The value of the key value pair
+    string value = 2;
+}

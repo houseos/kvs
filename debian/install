@@ -1,0 +1,2 @@
+target/release/kvsd /usr/bin
+target/release/kvsc /usr/bin
