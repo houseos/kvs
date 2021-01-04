@@ -93,11 +93,6 @@ jobs:
         prerelease: true
     - name: Download all workflow run artifacts
       uses: actions/download-artifact@v2
-    - name: ls
-      run: |
-        ls -al
-        ls -al kvsd-linux-amd64
-        ls -al kvsc-linux-amd64
     - name: Upload Release Asset Windows - kvsd
       id: upload-release-asset-windows-kvsd 
       uses: actions/upload-release-asset@v1
@@ -125,7 +120,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./kvsd-linux-amd64/kvsd-linux-amd64
+        asset_path: ./kvsd-linux-amd64/kvsd
         asset_name: kvsd-linux-amd64
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - kvsc
@@ -135,7 +130,7 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./kvsc-linux-amd64/kvsc-linux-amd64
+        asset_path: ./kvsc-linux-amd64/kvsc
         asset_name: kvsc-linux-amd64
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - debian
