@@ -9,6 +9,7 @@ all: clean build
 build:
 		export PROTOC=/usr/bin/protoc
 		export PROTOC_INCLUDE=/usr/include
+		env
 		cargo build --release
 
 clean:
