@@ -96,6 +96,8 @@ jobs:
     - name: ls
       run: |
         ls -al
+        ls -al kvsd-linux-amd64
+        ls -al kvsc-linux-amd64
     - name: Upload Release Asset Windows - kvsd
       id: upload-release-asset-windows-kvsd 
       uses: actions/upload-release-asset@v1
