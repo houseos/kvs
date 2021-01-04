@@ -2,7 +2,6 @@ Source: kvs
 Section: admin
 Priority: optional
 Maintainer: Benjamin Schilling <benjamin.schilling33@gmail.com>
-Build-Depends: cargo, protobuf-compiler
 Standards-Version: 4.0.0
 Homepage: https://github.com/HouseOS/kvs
 
