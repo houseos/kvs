@@ -7,7 +7,7 @@
 all: clean deps build 
 
 deps:
-		curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH=$(PATH):$(HOME)/.cargo/bin && rustup toolchain install nightly && rustup default nightly && rustup component add rustfmt &&
+		curl https://sh.rustup.rs -sSf | sh -s -- -y && export PATH=$(PATH):$(HOME)/.cargo/bin && rustup toolchain install nightly && rustup default nightly && rustup component add rustfmt
 
 build: deps
 		export PATH=$(PATH):$(HOME)/.cargo/bin && cargo build --release	
