@@ -120,8 +120,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./kvsd_linux_amd64/kvsd_linux_amd64
-        asset_name: kvsd_linux_amd64
+        asset_path: ./kvsd-linux-amd64/kvsd-linux-amd64
+        asset_name: kvsd-linux-amd64
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - kvsc
       id: upload-release-asset-linux-kvsc
@@ -130,8 +130,8 @@ jobs:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps 
-        asset_path: ./kvsc_linux_amd64/kvsc_linux_amd64
-        asset_name: kvsc_linux_amd64
+        asset_path: ./kvsc-linux-amd64/kvsc-linux-amd64
+        asset_name: kvsc-linux-amd64
         asset_content_type: application/octet-stream
     - name: Upload Release Asset Linux - debian
       id: upload-release-asset-linux-debian
