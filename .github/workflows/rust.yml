@@ -40,7 +40,7 @@ jobs:
     - name: Prepare Debian build
       run: |
         sudo apt-get update
-        sudo apt-get install debhelper cargo
+        sudo apt-get install debhelper
         mkdir -p debian-packaging
         rsync -av --exclude='debian-packaging' . debian-packaging/
     - name: Build Debian Package
