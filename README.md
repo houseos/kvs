@@ -113,7 +113,7 @@ The gRPC code is generated during build using the `build.rs` build script.
 
 The **kvsd** runs on a device. 
 
-```puml
+```plantuml
 caption System Component Diagram
 
 skinparam monochrome true
@@ -146,7 +146,7 @@ app -- gRPC
 The **kvsd** consists of three threads.
 The **main thread** is handling all commandline arguments, the **gRPC server thread** is receiving actions via gRPC and the **action queue thread** prevents concurrent writes (and deletes) to the store.
 
-```puml
+```plantuml
 @startuml
 caption Sequence Diagram
 
@@ -359,4 +359,4 @@ SPDX-License-Identifier: MIT
 
 ## Copyright 
 
-Copyright (C) 2020 Benjamin Schilling
+Copyright (C) 2020 - 2021 Benjamin Schilling
