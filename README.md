@@ -147,7 +147,6 @@ The **kvsd** consists of three threads.
 The **main thread** is handling all commandline arguments, the **gRPC server thread** is receiving actions via gRPC and the **action queue thread** prevents concurrent writes (and deletes) to the store.
 
 ```plantuml
-@startuml
 caption Sequence Diagram
 
 skinparam monochrome true
@@ -199,7 +198,6 @@ grpc --> client: Delete(key)
 deactivate grpc
 queue -> queue: Delete key & value
 deactivate queue
-@enduml
 
 ```
 
@@ -359,4 +357,4 @@ SPDX-License-Identifier: MIT
 
 ## Copyright 
 
-Copyright (C) 2020 - 2021 Benjamin Schilling
+Copyright (C) 2020 Benjamin Schilling
